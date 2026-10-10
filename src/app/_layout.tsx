@@ -46,6 +46,8 @@ function Nav() {
         <Stack.Screen name="ocr" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="livro/[id]" />
         <Stack.Screen name="lista/[id]" />
+        <Stack.Screen name="obra" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="genero/[id]" />
         <Stack.Screen name="editar" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="retrospectiva" />
         <Stack.Screen name="terminado" options={{ presentation: 'transparentModal', animation: 'fade' }} />

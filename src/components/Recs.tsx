@@ -1,8 +1,9 @@
-import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { uid } from '../lib/dates';
+import { openObra } from '../lib/nav';
 import { recommend, seedsOf, type Rec } from '../lib/recommend';
+import { sized } from '../lib/search';
 import { useStore } from '../lib/store';
 import { F, useColors } from '../lib/theme';
 import { Cover } from './Cover';
@@ -48,14 +49,9 @@ export function Recs() {
           {items.map((r) => (
             <View key={r.title} style={{ width: 108, gap: 6 }}>
               <Pressable
-                onPress={() =>
-                  router.push({
-                    pathname: '/editar',
-                    params: { title: r.title, author: r.author ?? '', pages: String(r.pages ?? ''), cover: r.cover ?? '', isbn: r.isbn ?? '', status: 'fila' },
-                  })
-                }
+                onPress={() => openObra(r)}
               >
-                <Cover title={r.title} author={r.author} uri={r.cover} width={108} />
+                <Cover title={r.title} author={r.author} uri={sized(r.cover, 300)} width={108} />
               </Pressable>
               <Txt k="small" lines={2} style={{ color: c.ink, fontFamily: F.semi }}>{r.title}</Txt>
               <Txt k="small" lines={2} style={{ fontSize: 12 }}>{r.reason}</Txt>
