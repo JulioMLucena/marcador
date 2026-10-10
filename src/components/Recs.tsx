@@ -46,7 +46,7 @@ export function Recs() {
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: 16 }} style={{ marginRight: -16 }}>
           {items.map((r) => (
-            <View key={r.title} style={{ width: 128, gap: 6 }}>
+            <View key={r.title} style={{ width: 108, gap: 6 }}>
               <Pressable
                 onPress={() =>
                   router.push({
@@ -55,7 +55,7 @@ export function Recs() {
                   })
                 }
               >
-                <Cover title={r.title} author={r.author} uri={r.cover} width={128} />
+                <Cover title={r.title} author={r.author} uri={r.cover} width={108} />
               </Pressable>
               <Txt k="small" lines={2} style={{ color: c.ink, fontFamily: F.semi }}>{r.title}</Txt>
               <Txt k="small" lines={2} style={{ fontSize: 12 }}>{r.reason}</Txt>
@@ -68,7 +68,7 @@ export function Recs() {
           ))}
         </ScrollView>
       )}
-      {items?.length ? <Txt k="small">Por causa de {[...new Set(items.map((r) => r.because))].join(', ')}.</Txt> : null}
+      {items?.length ? <Txt k="small">Por causa de {[...new Set(items.map((r) => r.because.split(':')[0]))].join(', ')}.</Txt> : null}
     </View>
   );
 }

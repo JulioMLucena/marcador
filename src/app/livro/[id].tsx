@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { BookEdge } from '../../components/BookEdge';
 import { Cover } from '../../components/Cover';
@@ -33,6 +34,7 @@ export default function LivroDetalhe() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data, saveBook, saveList, setSettings, setTimer, timer } = useStore();
   const b = data.books.find((x) => x.id === id);
+  const [allHistory, setAllHistory] = useState(false);
 
   if (!b) {
     return (
@@ -218,7 +220,7 @@ export default function LivroDetalhe() {
       <Card style={{ gap: 0 }}>
         <Txt k="label" style={{ marginBottom: 6 }}>Histórico de leitura</Txt>
         {ss.length ? (
-          ss.map((x, i) => (
+          (allHistory ? ss : ss.slice(0, 5)).map((x, i) => (
             <View key={x.id} style={{ paddingVertical: 10, gap: 3, borderTopWidth: i ? 1 : 0, borderTopColor: c.line }}>
               <Row style={{ justifyContent: 'space-between' }}>
                 <Txt style={{ fontFamily: F.semi, fontSize: 15 }}>{when(x.start)}</Txt>
@@ -234,6 +236,9 @@ export default function LivroDetalhe() {
         ) : (
           <Txt k="small">Nenhuma leitura registrada ainda. Toque em Ler agora e o cronômetro guarda tudo aqui.</Txt>
         )}
+        {ss.length > 5 ? (
+          <Btn title={allHistory ? 'Mostrar menos' : `Ver as ${ss.length} leituras`} kind="link" onPress={() => setAllHistory(!allHistory)} style={{ marginTop: 4 }} />
+        ) : null}
       </Card>
     </Screen>
   );

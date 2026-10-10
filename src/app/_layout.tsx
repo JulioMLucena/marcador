@@ -10,6 +10,7 @@ import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { ConfettiProvider } from '../components/Confetti';
 import { StoreProvider, useStore } from '../lib/store';
 import { useColors } from '../lib/theme';
@@ -21,7 +22,8 @@ function Nav() {
   const { ready } = useStore();
   const [a] = useFonts({ Literata_600SemiBold, Literata_700Bold, Literata_400Regular_Italic });
   const [b] = useFonts({ Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold });
-  const last = Notifications.useLastNotificationResponse();
+  // a prévia web não tem notificações; Platform.OS não muda, então a ordem dos hooks é estável
+  const last = Platform.OS === 'web' ? null : Notifications.useLastNotificationResponse();
 
   useEffect(() => {
     if (a && b && ready) SplashScreen.hideAsync().catch(() => {});
