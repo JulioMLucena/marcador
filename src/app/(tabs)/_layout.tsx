@@ -23,6 +23,7 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index" options={tab('Hoje', 'today-outline', 'today')} />
       <Tabs.Screen name="estante" options={tab('Estante', 'library-outline', 'library')} />
+      <Tabs.Screen name="descobrir" options={tab('Descobrir', 'compass-outline', 'compass')} />
       <Tabs.Screen name="trechos" options={tab('Trechos', 'chatbox-ellipses-outline', 'chatbox-ellipses')} />
       <Tabs.Screen name="voce" options={tab('Você', 'trophy-outline', 'trophy')} />
     </Tabs>

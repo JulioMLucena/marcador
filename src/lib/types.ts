@@ -1,6 +1,7 @@
 export type BookStatus = 'lendo' | 'fila' | 'pausado' | 'lido';
 export type Kind = 'denso' | 'leve';
 export type Mood = 'bom' | 'meh' | 'ruim';
+export type Format = 'livro' | 'manga' | 'quadrinho';
 
 export interface Book {
   id: string;
@@ -12,6 +13,10 @@ export interface Book {
   status: BookStatus;
   kind?: Kind;
   kindManual?: boolean;
+  /** Livro, mangá ou quadrinho; sem valor é livro. */
+  format?: Format;
+  /** Categorias que vieram da busca (Google Books), usadas nas recomendações. */
+  genres?: string[];
   cover?: string;
   isbn?: string;
   hook?: string;
@@ -81,3 +86,10 @@ export const MOODS: Record<Mood, { emoji: string; label: string }> = {
 export const DENSO = 300;
 export const kindOf = (b: Pick<Book, 'kind' | 'kindManual' | 'pages'>): Kind =>
   b.kindManual && b.kind ? b.kind : (b.pages || 0) >= DENSO ? 'denso' : 'leve';
+
+export const FORMATS: Record<Format, { label: string; emoji: string }> = {
+  livro: { label: 'Livro', emoji: '📖' },
+  manga: { label: 'Mangá', emoji: '🗾' },
+  quadrinho: { label: 'Quadrinho', emoji: '💥' },
+};
+export const formatOf = (b: Pick<Book, 'format'>): Format => b.format ?? 'livro';

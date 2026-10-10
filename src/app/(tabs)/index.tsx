@@ -7,7 +7,7 @@ import { addDays, dayKey, DOW, fmtMinutes, fmtTime, longDate } from '../../lib/d
 import { daysAway, forecast, minutesByDay, moodAlert, streak } from '../../lib/stats';
 import { pctOf, queueOf, readingOf, useStore } from '../../lib/store';
 import { F, useColors } from '../../lib/theme';
-import { kindOf, type Book } from '../../lib/types';
+import { FORMATS, formatOf, kindOf, type Book } from '../../lib/types';
 import { Recs } from '../../components/Recs';
 
 export default function Hoje() {
@@ -133,7 +133,7 @@ export default function Hoje() {
             <Cover title={b.title} author={b.author} uri={b.cover} width={78} />
           </Pressable>
           <View style={[s.grow, { gap: 4 }]}>
-            <Txt k="label">Lendo agora · {kindOf(b)}</Txt>
+            <Txt k="label">Lendo agora · {formatOf(b) !== 'livro' ? `${FORMATS[formatOf(b)].label} · ` : ''}{kindOf(b)}</Txt>
             <Txt k="h2" lines={3}>{b.title}</Txt>
             {b.author ? <Txt k="small" lines={1}>{b.author}</Txt> : null}
           </View>

@@ -5,12 +5,13 @@ import { Pressable, View } from 'react-native';
 import { BookEdge } from '../../components/BookEdge';
 import { Cover } from '../../components/Cover';
 import { CoverPicker } from '../../components/CoverPicker';
+import { CoverSearch } from '../../components/CoverSearch';
 import { Btn, Card, Row, Screen, Txt, s } from '../../components/ui';
 import { DOW, fmtMinutes, fmtTime, MONTHS } from '../../lib/dates';
 import { forecast } from '../../lib/stats';
 import { pctOf, useStore } from '../../lib/store';
 import { F, useColors } from '../../lib/theme';
-import { kindOf, MOODS, type BookStatus, type Mood } from '../../lib/types';
+import { FORMATS, formatOf, kindOf, MOODS, type BookStatus, type Mood } from '../../lib/types';
 
 const STATUS: { v: BookStatus; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { v: 'lendo', label: 'Lendo', icon: 'book' },
@@ -35,6 +36,7 @@ export default function LivroDetalhe() {
   const { data, saveBook, saveList, setSettings, setTimer, timer } = useStore();
   const b = data.books.find((x) => x.id === id);
   const [allHistory, setAllHistory] = useState(false);
+  const [coverSearch, setCoverSearch] = useState(false);
 
   if (!b) {
     return (
@@ -104,9 +106,23 @@ export default function LivroDetalhe() {
       </Row>
 
       <Row style={{ alignItems: 'flex-start', gap: 16 }}>
-        <Cover title={b.title} author={b.author} uri={b.cover} width={112} />
+        <Pressable onPress={() => setCoverSearch(true)} accessibilityRole="button" accessibilityLabel="Trocar a capa">
+          <Cover title={b.title} author={b.author} uri={b.cover} width={112} />
+        </Pressable>
+        <CoverSearch
+          visible={coverSearch}
+          title={b.title}
+          author={b.author}
+          isbn={b.isbn}
+          current={b.cover}
+          onClose={() => setCoverSearch(false)}
+          onPick={(cover) => {
+            setCoverSearch(false);
+            saveBook({ ...b, cover, updatedAt: Date.now() });
+          }}
+        />
         <View style={[s.grow, { gap: 4 }]}>
-          <Txt k="label">{kindOf(b)} · {b.pages} páginas</Txt>
+          <Txt k="label">{formatOf(b) !== 'livro' ? `${FORMATS[formatOf(b)].label} · ` : ''}{kindOf(b)} · {b.pages} páginas</Txt>
           <Txt k="h2" lines={4}>{b.title}</Txt>
           {b.author ? <Txt k="muted" lines={2}>{b.author}</Txt> : null}
           {b.startedAt ? (
@@ -119,8 +135,8 @@ export default function LivroDetalhe() {
       {!b.cover ? (
         <Card style={{ backgroundColor: c.soft, borderColor: 'transparent', gap: 8 }}>
           <Txt k="h3">Sem capa ainda</Txt>
-          <Txt k="small">Tire uma foto da capa ou escolha uma imagem. Ela aparece na estante e no widget.</Txt>
-          <CoverPicker cover={b.cover} onChange={(cover) => saveBook({ ...b, cover, updatedAt: Date.now() })} />
+          <Txt k="small">Busque as capas das edições na internet e escolha a sua, ou tire uma foto. Ela aparece na estante e no widget.</Txt>
+          <CoverPicker cover={b.cover} title={b.title} author={b.author} isbn={b.isbn} onChange={(cover) => saveBook({ ...b, cover, updatedAt: Date.now() })} />
         </Card>
       ) : null}
 

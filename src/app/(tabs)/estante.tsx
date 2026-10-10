@@ -1,15 +1,19 @@
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Cover } from '../../components/Cover';
 import { Shelf } from '../../components/Shelf';
-import { Btn, Card, Row, Screen, Txt, s } from '../../components/ui';
-import type { Book } from '../../lib/types';
+import { Btn, Card, Row, Screen, Seg, Txt, s } from '../../components/ui';
+import { FORMATS, formatOf, type Book, type Format } from '../../lib/types';
 import { queueOf, readingOf, useStore } from '../../lib/store';
 import { useColors } from '../../lib/theme';
 
 export default function Estante() {
   const c = useColors();
   const { data } = useStore();
+  const [only, setOnly] = useState<Format | 'todos'>('todos');
+  const formats = (['livro', 'manga', 'quadrinho'] as Format[]).filter((f) => data.books.some((b) => formatOf(b) === f));
+  const shown = only === 'todos' ? data.books : data.books.filter((b) => formatOf(b) === only);
   const lidos = data.books.filter((b) => b.status === 'lido');
   const pages = lidos.reduce((a, b) => a + (b.pages || 0), 0);
   return (
@@ -24,7 +28,14 @@ export default function Estante() {
         {readingOf(data).length} lendo · {queueOf(data).length} na fila · {lidos.length} {lidos.length === 1 ? 'lido' : 'lidos'}
         {pages ? ` (${pages.toLocaleString('pt-BR')} páginas)` : ''}
       </Txt>
-      <Shelf books={data.books} onOpen={(b) => router.push({ pathname: '/livro/[id]', params: { id: b.id } })} />
+      {formats.length > 1 ? (
+        <Seg
+          value={only}
+          options={[{ v: 'todos' as const, label: 'Todos' }, ...formats.map((f) => ({ v: f, label: `${FORMATS[f].emoji} ${f === 'livro' ? 'Livros' : f === 'manga' ? 'Mangás' : 'Quadrinhos'}` }))]}
+          onChange={setOnly}
+        />
+      ) : null}
+      <Shelf books={shown} onOpen={(b) => router.push({ pathname: '/livro/[id]', params: { id: b.id } })} />
       {data.books.length ? (
         <Row style={{ flexWrap: 'wrap', gap: 14 }}>
           <Legend color="#e0503a" w={7} h={14} label="de frente: lendo agora" />

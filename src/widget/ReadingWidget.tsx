@@ -24,7 +24,10 @@ function hslHex(h: number, s: number, l: number): Hex {
   return `#${[f(0), f(8), f(4)].map((x) => x.toString(16).padStart(2, '0')).join('')}`;
 }
 
-export function ReadingWidget({ d, dark }: { d: WidgetData; dark: boolean }) {
+/** Altura do widget em dp; a capa ocupa quase toda a altura. */
+export function ReadingWidget({ d, dark, height = 150 }: { d: WidgetData; dark: boolean; height?: number }) {
+  const coverH = Math.max(96, Math.round(height - 20));
+  const coverW = Math.round(coverH * (2 / 3));
   const bg: Hex = dark ? '#16201B' : '#FFFFFF';
   const ink: Hex = dark ? '#E4EAE5' : '#18231E';
   const muted: Hex = dark ? '#93A39A' : '#5B6A62';
@@ -52,13 +55,13 @@ export function ReadingWidget({ d, dark }: { d: WidgetData; dark: boolean }) {
       style={{ height: 'match_parent', width: 'match_parent', backgroundColor: bg, borderRadius: 20, flexDirection: 'row' }}
     >
       {d.cover ? (
-        <FlexWidget style={{ height: 'match_parent', paddingLeft: 12, paddingVertical: 12, justifyContent: 'center' }}>
+        <FlexWidget style={{ height: 'match_parent', paddingLeft: 10, paddingVertical: 10, justifyContent: 'center' }}>
           <ImageWidget
             // o pacote aceita file:// no Android, só o tipo não declara
             image={d.cover as `https:${string}`}
-            imageWidth={64}
-            imageHeight={96}
-            radius={6}
+            imageWidth={coverW}
+            imageHeight={coverH}
+            radius={8}
             resizeMode="cover"
           />
         </FlexWidget>

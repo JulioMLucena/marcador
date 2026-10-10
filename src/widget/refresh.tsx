@@ -50,13 +50,12 @@ export async function widgetData({ books, sessions, settings }: Data): Promise<W
   };
 }
 
-export async function renderWidgetFor(data: Data) {
+export async function renderWidgetFor(data: Data, height?: number) {
   const d = await widgetData(data);
-  return { light: <ReadingWidget d={d} dark={false} />, dark: <ReadingWidget d={d} dark /> };
+  return { light: <ReadingWidget d={d} dark={false} height={height} />, dark: <ReadingWidget d={d} dark height={height} /> };
 }
 
 export async function refreshWidget(data: Data) {
   if (Platform.OS !== 'android') return;
-  const view = await renderWidgetFor(data);
-  await requestWidgetUpdate({ widgetName: WIDGET_NAME, renderWidget: () => view, widgetNotFound: () => {} });
+  await requestWidgetUpdate({ widgetName: WIDGET_NAME, renderWidget: (info) => renderWidgetFor(data, info.height), widgetNotFound: () => {} });
 }
