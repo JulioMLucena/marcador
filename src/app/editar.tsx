@@ -9,7 +9,7 @@ import { askNotificationPermission } from '../lib/notify';
 import { useStore } from '../lib/store';
 import { F, useColors } from '../lib/theme';
 import { findBooks, guessFormat, type Found } from '../lib/search';
-import { DENSO, FORMATS, kindOf, type Book, type BookStatus, type Format, type Kind } from '../lib/types';
+import { DENSO, kindOf, type Book, type BookStatus, type Format, type Kind } from '../lib/types';
 
 type P = { id?: string; isbn?: string; title?: string; author?: string; pages?: string; cover?: string; status?: BookStatus; format?: Format; genres?: string };
 
@@ -99,15 +99,14 @@ export default function Livro() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Screen>
         <Row style={{ justifyContent: 'space-between' }}>
-          <Txt k="h1">{editing ? 'Editar' : `Novo ${FORMATS[format].label.toLowerCase()}`}</Txt>
+          <Txt k="h1">{editing ? 'Editar livro' : 'Novo livro'}</Txt>
           <Btn title="Fechar" kind="link" onPress={() => router.back()} />
         </Row>
-        <Seg value={format} options={(['livro', 'manga', 'quadrinho'] as Format[]).map((v) => ({ v, label: `${FORMATS[v].emoji} ${FORMATS[v].label}` }))} onChange={setFormat} />
         <Row style={{ alignItems: 'flex-start', gap: 14 }}>
           <Cover title={title || 'Livro'} author={author} uri={cover} width={92} />
           <View style={[s.grow, { gap: 8 }]}>
             <Txt k="label">Título</Txt>
-            {input(title, (v) => { typed.current = true; setTitle(v); }, { placeholder: format === 'manga' ? 'Ex.: One Piece vol. 1' : format === 'quadrinho' ? 'Ex.: Sandman' : 'Ex.: Torto Arado' })}
+            {input(title, (v) => { typed.current = true; setTitle(v); }, { placeholder: 'Livro, mangá ou HQ' })}
             <Txt k="label">Autor</Txt>
             {input(author, setAuthor, { placeholder: 'Opcional' })}
           </View>

@@ -11,7 +11,7 @@ import { DOW, fmtMinutes, fmtTime, MONTHS } from '../../lib/dates';
 import { forecast } from '../../lib/stats';
 import { pctOf, useStore } from '../../lib/store';
 import { F, useColors } from '../../lib/theme';
-import { FORMATS, formatOf, kindOf, MOODS, type BookStatus, type Mood } from '../../lib/types';
+import { kindOf, MOODS, type BookStatus, type Mood } from '../../lib/types';
 
 const STATUS: { v: BookStatus; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { v: 'lendo', label: 'Lendo', icon: 'book' },
@@ -122,7 +122,7 @@ export default function LivroDetalhe() {
           }}
         />
         <View style={[s.grow, { gap: 4 }]}>
-          <Txt k="label">{formatOf(b) !== 'livro' ? `${FORMATS[formatOf(b)].label} · ` : ''}{kindOf(b)} · {b.pages} páginas</Txt>
+          <Txt k="label">{kindOf(b)} · {b.pages} páginas</Txt>
           <Txt k="h2" lines={4}>{b.title}</Txt>
           {b.author ? <Txt k="muted" lines={2}>{b.author}</Txt> : null}
           {b.startedAt ? (
