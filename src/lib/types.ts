@@ -1,0 +1,74 @@
+export type BookStatus = 'lendo' | 'fila' | 'pausado' | 'lido';
+export type Kind = 'denso' | 'leve';
+export type Mood = 'bom' | 'meh' | 'ruim';
+
+export interface Book {
+  id: string;
+  title: string;
+  author?: string;
+  pages: number;
+  page: number;
+  why?: string;
+  status: BookStatus;
+  kind?: Kind;
+  kindManual?: boolean;
+  cover?: string;
+  isbn?: string;
+  hook?: string;
+  moodAck?: number;
+  createdAt: number;
+  updatedAt: number;
+  startedAt?: number;
+  finishedAt?: number;
+}
+
+export interface Session {
+  id: string;
+  bookId: string;
+  start: number;
+  day: string;
+  minutes: number;
+  fromPage: number;
+  toPage: number;
+  mood?: Mood | null;
+  note?: string | null;
+  photo?: string | null;
+}
+
+export interface Settings {
+  goal: number;
+  hour: number;
+  minute: number;
+  notify: boolean;
+  sound: SoundId;
+  currentId?: string | null;
+  yearGoal: number;
+}
+
+export type SoundId = 'nenhum' | 'chuva' | 'ondas' | 'marrom';
+
+export interface Data {
+  books: Book[];
+  sessions: Session[];
+  settings: Settings;
+}
+
+export const DEFAULT_SETTINGS: Settings = {
+  goal: 5,
+  hour: 21,
+  minute: 0,
+  notify: true,
+  sound: 'chuva',
+  currentId: null,
+  yearGoal: 12,
+};
+
+export const MOODS: Record<Mood, { emoji: string; label: string }> = {
+  bom: { emoji: '🙂', label: 'Animado' },
+  meh: { emoji: '😐', label: 'Normal' },
+  ruim: { emoji: '🙁', label: 'Arrastado' },
+};
+
+export const DENSO = 300;
+export const kindOf = (b: Pick<Book, 'kind' | 'kindManual' | 'pages'>): Kind =>
+  b.kindManual && b.kind ? b.kind : (b.pages || 0) >= DENSO ? 'denso' : 'leve';

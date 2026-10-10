@@ -1,0 +1,191 @@
+import { router } from 'expo-router';
+import { Pressable, View } from 'react-native';
+import { BookEdge } from '../../components/BookEdge';
+import { Cover } from '../../components/Cover';
+import { Btn, Card, Row, Screen, Txt, s } from '../../components/ui';
+import { addDays, dayKey, DOW, fmtMinutes, fmtTime, longDate } from '../../lib/dates';
+import { daysAway, forecast, minutesByDay, moodAlert, streak } from '../../lib/stats';
+import { pctOf, queueOf, readingOf, useStore } from '../../lib/store';
+import { F, useColors } from '../../lib/theme';
+import { kindOf } from '../../lib/types';
+
+export default function Hoje() {
+  const c = useColors();
+  const { data, current: b, saveBook, setSettings, setTimer, timer } = useStore();
+  const { sessions, settings } = data;
+  const today = new Date();
+  const mbd = minutesByDay(sessions);
+  const readToday = mbd[dayKey(today)] || 0;
+  const goal = settings.goal;
+  const st = streak(sessions);
+  const away = daysAway(sessions);
+  const nextUp = queueOf(data)[0];
+
+  const start = (minutes: number) => {
+    if (!b) return;
+    if (!timer) setTimer({ bookId: b.id, start: Date.now(), pausedMs: 0, pausedAt: null, target: minutes, fromPage: b.page || 0 });
+    router.push('/ler');
+  };
+
+  const header = (
+    <Row style={{ justifyContent: 'space-between', alignItems: 'flex-end' }}>
+      <View>
+        <Txt k="h1">Hoje</Txt>
+        <Txt k="small">{longDate(today)}</Txt>
+      </View>
+      <Pressable onPress={() => router.push('/voce')} accessibilityRole="button">
+        <Txt k="small" style={{ color: c.accent, fontFamily: F.semi }}>
+          Hora de ler: {fmtTime(settings.hour, settings.minute)}
+        </Txt>
+      </Pressable>
+    </Row>
+  );
+
+  if (!b) {
+    return (
+      <Screen>
+        {header}
+        <Card style={{ alignItems: 'center', paddingVertical: 28, gap: 14 }}>
+          <Txt k="h2" style={{ textAlign: 'center' }}>Qual livro está na sua mesa de cabeceira?</Txt>
+          <Txt k="muted" style={{ textAlign: 'center' }}>
+            Aponte a câmera para o código de barras atrás do livro e o Marcador puxa capa, título e páginas.
+          </Txt>
+          <Btn title="Escanear livro" icon="📷" big onPress={() => router.push('/scan')} style={{ alignSelf: 'stretch' }} />
+          <Btn title="Digitar à mão" kind="link" onPress={() => router.push('/livro')} />
+        </Card>
+      </Screen>
+    );
+  }
+
+  const pct = pctOf(b);
+  const fc = forecast(b, sessions);
+  const other = readingOf(data).find((x) => x.id !== b.id);
+  const minutes = away >= 3 ? 1 : goal;
+  const mon = addDays(today, -((today.getDay() + 6) % 7));
+  const week = [...Array(7)].map((_, i) => addDays(mon, i));
+  const last7 = [...Array(7)].map((_, i) => addDays(today, i - 6));
+  const max = Math.max(goal * 2, ...last7.map((d) => mbd[dayKey(d)] || 0));
+
+  return (
+    <Screen>
+      {header}
+
+      {moodAlert(b, sessions) ? (
+        <Card style={{ backgroundColor: c.amberSoft, borderColor: c.amber + '66' }}>
+          <Txt k="h3">Esse livro está pesando</Txt>
+          <Txt>Suas três últimas leituras de {b.title} foram arrastadas. Pausar não é desistir: ele fica guardado com a página marcada.</Txt>
+          <Row style={{ flexWrap: 'wrap' }}>
+            <Btn
+              title={nextUp ? `Pausar e começar ${nextUp.title}` : 'Pausar este livro'}
+              onPress={() => {
+                saveBook({ ...b, status: 'pausado', updatedAt: Date.now() });
+                if (nextUp) {
+                  saveBook({ ...nextUp, status: 'lendo', startedAt: Date.now(), updatedAt: Date.now() });
+                  setSettings({ currentId: nextUp.id });
+                }
+              }}
+            />
+            <Btn title="Continuar com ele" kind="ghost" onPress={() => saveBook({ ...b, moodAck: sessions.filter((x) => x.bookId === b.id).length })} />
+          </Row>
+        </Card>
+      ) : away >= 3 ? (
+        <Card style={{ backgroundColor: c.soft, borderColor: 'transparent' }}>
+          <Txt k="h3">Faz {away} dias. Tudo bem.</Txt>
+          <Txt>Hoje vale só 1 minuto. Abra o livro na página {b.page || 1} e leia um parágrafo.</Txt>
+        </Card>
+      ) : null}
+
+      <Card>
+        <Row style={{ alignItems: 'flex-start', gap: 14 }}>
+          <Pressable onPress={() => router.push({ pathname: '/livro', params: { id: b.id } })}>
+            <Cover title={b.title} author={b.author} uri={b.cover} width={78} />
+          </Pressable>
+          <View style={[s.grow, { gap: 4 }]}>
+            <Txt k="label">Lendo agora · {kindOf(b)}</Txt>
+            <Txt k="h2" lines={3}>{b.title}</Txt>
+            {b.author ? <Txt k="small" lines={1}>{b.author}</Txt> : null}
+          </View>
+        </Row>
+        <BookEdge title={b.title} pct={pct} />
+        <Txt style={{ fontVariant: ['tabular-nums'] }}>
+          p. {b.page || 0} de {b.pages} · <Txt style={{ fontFamily: F.semi }}>{pct}%</Txt> · {fc.left} páginas pela frente
+        </Txt>
+        {fc.daysLeft ? (
+          <Txt k="small">
+            No seu ritmo ({Math.round(fc.perDay)} pág/dia), você termina em {fc.daysLeft} {fc.daysLeft === 1 ? 'dia' : 'dias'}, lá por {fc.date!.getDate()}/{fc.date!.getMonth() + 1}.
+          </Txt>
+        ) : null}
+        {b.hook ? (
+          <View style={{ backgroundColor: c.amberSoft, borderRadius: 10, padding: 12, gap: 4 }}>
+            <Txt k="label">Gancho para hoje</Txt>
+            <Txt k="quote">{b.hook}</Txt>
+          </View>
+        ) : null}
+        {b.why ? (
+          <View style={{ borderLeftWidth: 3, borderLeftColor: c.soft, paddingLeft: 10 }}>
+            <Txt k="quote" style={{ color: c.muted, fontSize: 15 }}>{b.why}</Txt>
+          </View>
+        ) : null}
+      </Card>
+
+      <Btn
+        big
+        icon={timer ? '⏱️' : '📖'}
+        title={timer ? 'Voltar para a leitura' : readToday >= goal ? 'Ler mais um pouco' : `Ler agora · ${minutes} min`}
+        onPress={() => start(minutes)}
+      />
+      {other ? (
+        <Btn kind="link" title={`Sem clima? Trocar para ${other.title} (${kindOf(other)})`} onPress={() => setSettings({ currentId: other.id })} />
+      ) : nextUp ? (
+        <Txt k="small" style={{ textAlign: 'center' }}>Dica: deixe um livro leve em rotação para os dias sem vontade. Próximo na fila: {nextUp.title}.</Txt>
+      ) : null}
+
+      <Row style={{ alignItems: 'stretch' }}>
+        <Card style={[s.grow, { gap: 6 }]}>
+          <Txt k="label">Sequência</Txt>
+          <Txt k="h1" style={{ fontSize: 26 }}>🔥 {st.n}</Txt>
+          <Row style={{ gap: 5 }}>
+            {week.map((d) => {
+              const k = dayKey(d);
+              const on = !!mbd[k];
+              const isToday = k === dayKey(today);
+              return (
+                <View
+                  key={k}
+                  style={{ width: 13, height: 13, borderRadius: 7, backgroundColor: on ? c.accent : 'transparent', borderWidth: on ? 0 : 2, borderColor: isToday ? c.accent : c.line }}
+                />
+              );
+            })}
+          </Row>
+          <Txt k="small">Folga da semana: {st.graceUsed ? 'usada' : 'disponível'}</Txt>
+        </Card>
+        <Card style={[s.grow, { gap: 6 }]}>
+          <Txt k="label">Hoje</Txt>
+          <Txt k="h1" style={{ fontSize: 26 }}>{fmtMinutes(readToday)}</Txt>
+          <View style={{ height: 8, borderRadius: 4, backgroundColor: c.line, overflow: 'hidden' }}>
+            <View style={{ width: `${Math.min(100, (readToday / goal) * 100)}%`, height: 8, backgroundColor: readToday >= goal ? c.amber : c.accent }} />
+          </View>
+          <Txt k="small">{readToday >= goal ? 'Meta cumprida' : `Meta: ${goal} min`}</Txt>
+        </Card>
+      </Row>
+
+      <Card>
+        <Row style={{ justifyContent: 'space-between' }}>
+          <Txt k="label">Últimos 7 dias</Txt>
+          <Txt k="small">{fmtMinutes(last7.reduce((a, d) => a + (mbd[dayKey(d)] || 0), 0))} no total</Txt>
+        </Row>
+        <View style={{ height: 96, flexDirection: 'row', alignItems: 'flex-end', gap: 6 }}>
+          {last7.map((d, i) => {
+            const v = mbd[dayKey(d)] || 0;
+            return (
+              <View key={i} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
+                <View style={{ width: '80%', maxWidth: 28, height: Math.max(4, (v / max) * 70), borderRadius: 6, backgroundColor: v >= goal ? c.accent : c.soft }} />
+                <Txt k="small" style={{ fontSize: 11, color: i === 6 ? c.ink : c.muted, fontFamily: i === 6 ? F.semi : F.body }}>{DOW[d.getDay()]}</Txt>
+              </View>
+            );
+          })}
+        </View>
+      </Card>
+    </Screen>
+  );
+}
