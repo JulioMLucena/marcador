@@ -1,13 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useRef, useState } from 'react';
-import { Platform, Text, ToastAndroid, useWindowDimensions, View } from 'react-native';
+import { Platform, Pressable, Text, ToastAndroid, useWindowDimensions, View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 import { Cover } from '../components/Cover';
 import { Btn, Row, Screen, Txt } from '../components/ui';
 import { daysBetween, fmtMinutes, MONTHS } from '../lib/dates';
 import { useStore } from '../lib/store';
-import { F } from '../lib/theme';
+import { F, useColors } from '../lib/theme';
 
 // mesma identidade da retrospectiva: o cartão vai para fora do app, então não segue o tema
 const K = { bg: '#0F1D17', panel: '#17291F', ink: '#F1EEE4', muted: '#9DB3A6', amber: '#E8B04E', accent: '#73C3A3' };
@@ -19,10 +19,13 @@ const short = (t: number) => {
 
 /** Cartão 9:16 de livro terminado para postar nos stories. */
 export default function Compartilhar() {
+  const c = useColors();
   const { width } = useWindowDimensions();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data } = useStore();
   const [busy, setBusy] = useState(false);
+  // trecho escolhido para o cartão; sem escolha, vai o último salvo
+  const [pick, setPick] = useState<number | null | undefined>(undefined);
   const card = useRef<View>(null);
   const b = data.books.find((x) => x.id === id);
   const W = Math.min(width - 32, 420);
@@ -38,7 +41,8 @@ export default function Compartilhar() {
   const perDay = Math.round(b.pages / Math.max(1, readDays || span));
   const year = new Date(end).getFullYear();
   const nth = data.books.filter((x) => x.status === 'lido' && x.finishedAt && new Date(x.finishedAt).getFullYear() === year && x.finishedAt <= end).length || 1;
-  const quote = [...ss].reverse().find((s) => s.note)?.note;
+  const notes = [...ss].reverse().filter((s) => s.note).map((s) => s.note!);
+  const quote = pick === null ? undefined : notes[pick ?? 0];
   const good = ss.filter((s) => s.mood === 'bom').length;
   const rated = ss.filter((s) => s.mood).length;
 
@@ -137,6 +141,25 @@ export default function Compartilhar() {
         </View>
       </View>
 
+      {notes.length > 1 ? (
+        <View style={{ gap: 8 }}>
+          <Txt k="label">Trecho no cartão</Txt>
+          {[...notes.map((n, i) => ({ i: i as number | null, t: `“${n}”` })), { i: null, t: 'Sem trecho' }].map(({ i, t }) => {
+            const on = (pick === undefined ? 0 : pick) === i;
+            return (
+              <Pressable
+                key={String(i)}
+                onPress={() => setPick(i)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: on }}
+                style={{ borderWidth: on ? 2 : 1, borderColor: on ? c.accent : c.line, backgroundColor: c.surface, borderRadius: 12, padding: 12 }}
+              >
+                <Txt k={i === null ? 'small' : 'quote'} lines={2} style={{ fontSize: 15 }}>{t}</Txt>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
       <Btn big icon="📲" title="Postar no Stories" onPress={share} disabled={busy} />
       <Txt k="small" style={{ textAlign: 'center' }}>Escolha o Instagram na lista e toque em Stories.</Txt>
       <Btn title="Salvar na galeria" kind="ghost" onPress={saveToGallery} disabled={busy} />
