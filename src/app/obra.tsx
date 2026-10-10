@@ -52,7 +52,7 @@ export default function ObraScreen() {
       })
       .catch(() => alive && setFailed(true));
     getExtra(base).then((x) => alive && setExtra(x)).catch(() => alive && setExtra({}));
-    moreByAuthor(base).then((x) => alive && setMore(x)).catch(() => alive && setMore([]));
+    moreByAuthor(base).then((x) => alive && setMore(x.filter((b) => !data.books.some((y) => norm(y.title.split(':')[0]) === norm(b.title.split(':')[0]))))).catch(() => alive && setMore([]));
     return () => {
       alive = false;
     };

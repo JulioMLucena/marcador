@@ -142,6 +142,7 @@ export interface Topic {
   id: string;
   label: string;
   emoji: string;
+  color: string;
   /** Busca no Google Books. */
   q: string;
   /** Categorias do Google Books que contam como este tópico na sua estante. */
@@ -149,22 +150,22 @@ export interface Topic {
 }
 
 export const TOPICS: Topic[] = [
-  { id: 'ficcao', label: 'Ficção', emoji: '📖', q: 'subject:fiction', match: /^fiction$|literary/i },
-  { id: 'brasil', label: 'Literatura brasileira', emoji: '🇧🇷', q: 'subject:"Brazilian fiction"', match: /brazil/i },
-  { id: 'fantasia', label: 'Fantasia', emoji: '🐉', q: 'subject:fantasy', match: /fantasy/i },
-  { id: 'scifi', label: 'Ficção científica', emoji: '🚀', q: 'subject:"science fiction"', match: /science fiction/i },
-  { id: 'terror', label: 'Terror', emoji: '🩸', q: 'subject:horror', match: /horror/i },
-  { id: 'suspense', label: 'Suspense', emoji: '🔎', q: 'subject:thriller', match: /thriller|mystery|suspense|detective/i },
-  { id: 'romance', label: 'Romance', emoji: '💌', q: 'subject:romance', match: /romance|love stor/i },
-  { id: 'classicos', label: 'Clássicos', emoji: '🏛️', q: 'subject:classics', match: /classic/i },
-  { id: 'manga', label: 'Mangá', emoji: '🗾', q: 'subject:manga', match: /manga/i },
-  { id: 'hq', label: 'Quadrinhos', emoji: '💥', q: 'subject:comics', match: /comic|graphic novel/i },
-  { id: 'historia', label: 'História', emoji: '🏺', q: 'subject:history', match: /^history|world history/i },
-  { id: 'biografia', label: 'Biografias', emoji: '👤', q: 'subject:biography', match: /biograph|memoir/i },
-  { id: 'ciencia', label: 'Ciência', emoji: '🔬', q: 'subject:science', match: /^science|psychology|nature/i },
-  { id: 'autoajuda', label: 'Desenvolvimento pessoal', emoji: '🌱', q: 'subject:"self-help"', match: /self-help|personal growth/i },
-  { id: 'negocios', label: 'Negócios', emoji: '💼', q: 'subject:business', match: /business|economics/i },
-  { id: 'poesia', label: 'Poesia', emoji: '🪶', q: 'subject:poetry', match: /poetry/i },
+  { id: 'ficcao', color: '#3E4C8A', label: 'Ficção', emoji: '📖', q: 'subject:fiction', match: /^fiction$|literary/i },
+  { id: 'brasil', color: '#2E7D4F', label: 'Literatura brasileira', emoji: '🇧🇷', q: 'subject:"Brazilian fiction"', match: /brazil/i },
+  { id: 'fantasia', color: '#6A3FA0', label: 'Fantasia', emoji: '🐉', q: 'subject:fantasy', match: /fantasy/i },
+  { id: 'scifi', color: '#1F5F8B', label: 'Ficção científica', emoji: '🚀', q: 'subject:"science fiction"', match: /science fiction/i },
+  { id: 'terror', color: '#8E1B1B', label: 'Terror', emoji: '🩸', q: 'subject:horror', match: /horror/i },
+  { id: 'suspense', color: '#37474F', label: 'Suspense', emoji: '🔎', q: 'subject:thriller', match: /thriller|mystery|suspense|detective/i },
+  { id: 'romance', color: '#C2456B', label: 'Romance', emoji: '💌', q: 'subject:romance', match: /romance|love stor/i },
+  { id: 'classicos', color: '#8A6D3B', label: 'Clássicos', emoji: '🏛️', q: 'subject:classics', match: /classic/i },
+  { id: 'manga', color: '#D2453A', label: 'Mangá', emoji: '🗾', q: 'subject:manga', match: /manga/i },
+  { id: 'hq', color: '#E0832B', label: 'Quadrinhos', emoji: '💥', q: 'subject:comics', match: /comic|graphic novel/i },
+  { id: 'historia', color: '#7A4E2D', label: 'História', emoji: '🏺', q: 'subject:history', match: /^history|world history/i },
+  { id: 'biografia', color: '#4E6A75', label: 'Biografias', emoji: '👤', q: 'subject:biography', match: /biograph|memoir/i },
+  { id: 'ciencia', color: '#13817A', label: 'Ciência', emoji: '🔬', q: 'subject:science', match: /^science|psychology|nature/i },
+  { id: 'autoajuda', color: '#5E8C31', label: 'Desenvolvimento pessoal', emoji: '🌱', q: 'subject:"self-help"', match: /self-help|personal growth/i },
+  { id: 'negocios', color: '#2F4858', label: 'Negócios', emoji: '💼', q: 'subject:business', match: /business|economics/i },
+  { id: 'poesia', color: '#9A4F8C', label: 'Poesia', emoji: '🪶', q: 'subject:poetry', match: /poetry/i },
 ];
 
 const DAY = 864e5;

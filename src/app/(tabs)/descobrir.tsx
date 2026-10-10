@@ -6,7 +6,7 @@ import { Btn, Card, Row, Screen, Txt } from '../../components/ui';
 import { recommend, type Rec } from '../../lib/recommend';
 import { TOPICS, topicBooks } from '../../lib/search';
 import { useStore } from '../../lib/store';
-import { bookColor, F, useColors } from '../../lib/theme';
+import { F, useColors } from '../../lib/theme';
 
 /** Tópicos que aparecem nos livros da estante, pelos gêneros e formatos. */
 function shelfTopics(books: { genres?: string[]; format?: string }[]) {
@@ -81,7 +81,7 @@ export default function Descobrir() {
             accessibilityRole="button"
             style={({ pressed }) => ({
               width: '48.4%', height: 68, borderRadius: 14, padding: 12, justifyContent: 'space-between', overflow: 'hidden',
-              backgroundColor: bookColor(t.label), opacity: pressed ? 0.85 : 1,
+              backgroundColor: t.color, opacity: pressed ? 0.85 : 1,
             })}
           >
             <Txt style={{ color: '#fff', fontFamily: F.semi, fontSize: 15 }} lines={1}>{t.label}</Txt>
