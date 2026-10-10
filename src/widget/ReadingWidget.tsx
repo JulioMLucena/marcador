@@ -59,7 +59,7 @@ export function ReadingWidget({ d, dark, height = 150 }: { d: WidgetData; dark: 
             />
           </FlexWidget>
           <TextWidget
-            text={d.streak ? `🔥 ${d.streak} ${d.streak === 1 ? 'dia' : 'dias'} seguidos` : '📖 5 minutos hoje já contam'}
+            text={d.streak ? (d.streak === 1 ? '🔥 1 dia de sequência' : `🔥 ${d.streak} dias seguidos`) : '📖 5 minutos hoje já contam'}
             maxLines={1}
             style={{ fontSize: 12, color: '#FFFFFF', fontWeight: '600' }}
           />
