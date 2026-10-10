@@ -7,7 +7,7 @@ import { F, useColors } from '../lib/theme';
 export function Screen({ children, scroll = true, pad = true }: { children: ReactNode; scroll?: boolean; pad?: boolean }) {
   const c = useColors();
   const ins = useSafeAreaInsets();
-  const inner = { paddingHorizontal: pad ? 16 : 0, paddingTop: ins.top + 14, paddingBottom: 28, gap: 16 };
+  const inner = { paddingHorizontal: pad ? 16 : 0, paddingTop: ins.top + 14, paddingBottom: ins.bottom + 28, gap: 16 };
   if (!scroll) return <View style={[{ flex: 1, backgroundColor: c.bg }, inner]}>{children}</View>;
   return (
     <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={inner} keyboardShouldPersistTaps="handled">

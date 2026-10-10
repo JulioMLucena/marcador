@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BookEdge } from '../../components/BookEdge';
 import { Cover } from '../../components/Cover';
 import { Btn, Card, Row, Screen, Txt, s } from '../../components/ui';
@@ -13,6 +14,7 @@ import { Recs } from '../../components/Recs';
 
 export default function Hoje() {
   const c = useColors();
+  const ins = useSafeAreaInsets();
   const { data, current: b, saveBook, setSettings, setTimer, timer } = useStore();
   const { sessions, settings } = data;
   const today = new Date();
@@ -89,10 +91,10 @@ export default function Hoje() {
           </Card>
         )}
         <Recs />
-        <Modal visible={!!ask} transparent animationType="fade" onRequestClose={() => setAsk(null)}>
+        <Modal visible={!!ask} transparent animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={() => setAsk(null)}>
           <Pressable onPress={() => setAsk(null)} style={{ flex: 1, backgroundColor: '#000a', justifyContent: 'flex-end' }}>
             {ask ? (
-              <Pressable onPress={() => {}} style={{ backgroundColor: c.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 22, paddingBottom: 34, gap: 16 }}>
+              <Pressable onPress={() => {}} style={{ backgroundColor: c.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 22, paddingBottom: ins.bottom + 22, gap: 16 }}>
                 <Row style={{ gap: 16, alignItems: 'flex-start' }}>
                   <Cover title={ask.title} author={ask.author} uri={ask.cover} width={78} />
                   <View style={[s.grow, { gap: 4 }]}>
