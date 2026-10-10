@@ -55,8 +55,9 @@ export default function Terminado() {
         {b.why ? (
           <Txt k="quote" style={{ color: c.muted, textAlign: 'center', fontSize: 15 }}>Você começou porque: {b.why}</Txt>
         ) : null}
+        <Btn big icon="📸" style={{ alignSelf: 'stretch' }} title="Compartilhar nos stories" onPress={() => router.push({ pathname: '/compartilhar', params: { id: b.id } })} />
         <Btn
-          big
+          kind="ghost"
           style={{ alignSelf: 'stretch' }}
           title={next ? `Começar ${next.title}` : 'Escolher o próximo'}
           onPress={() => {

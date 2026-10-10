@@ -50,6 +50,7 @@ function Nav() {
         <Stack.Screen name="genero/[id]" />
         <Stack.Screen name="editar" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="retrospectiva" />
+        <Stack.Screen name="compartilhar" />
         <Stack.Screen name="terminado" options={{ presentation: 'transparentModal', animation: 'fade' }} />
       </Stack>
     </>
