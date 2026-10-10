@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, TextInput, View } from 'react-native';
 import { Cover } from '../components/Cover';
+import { CoverPicker } from '../components/CoverPicker';
 import { Btn, Card, Row, Screen, Seg, Txt, s } from '../components/ui';
 import { uid } from '../lib/dates';
 import { askNotificationPermission } from '../lib/notify';
@@ -9,7 +10,7 @@ import { useStore } from '../lib/store';
 import { F, useColors } from '../lib/theme';
 import { DENSO, kindOf, type Book, type BookStatus, type Kind } from '../lib/types';
 
-type P = { id?: string; isbn?: string; title?: string; author?: string; pages?: string; cover?: string };
+type P = { id?: string; isbn?: string; title?: string; author?: string; pages?: string; cover?: string; status?: BookStatus };
 
 export default function Livro() {
   const c = useColors();
@@ -21,11 +22,11 @@ export default function Livro() {
   const [pages, setPages] = useState(String(editing?.pages ?? p.pages ?? ''));
   const [page, setPage] = useState(String(editing?.page ?? 0));
   const [why, setWhy] = useState(editing?.why ?? '');
-  const [status, setStatus] = useState<BookStatus>(editing?.status ?? (current ? 'fila' : 'lendo'));
+  const [status, setStatus] = useState<BookStatus>(editing?.status ?? p.status ?? (current ? 'fila' : 'lendo'));
   const [kindManual, setKindManual] = useState(!!editing?.kindManual);
   const [kind, setKind] = useState<Kind>(editing ? kindOf(editing) : 'denso');
   const [confirmDel, setConfirmDel] = useState(false);
-  const cover = editing?.cover ?? p.cover ?? undefined;
+  const [cover, setCover] = useState<string | undefined>(editing?.cover ?? (p.cover || undefined));
   const nPages = parseInt(pages, 10) || 0;
   const shownKind: Kind = kindManual ? kind : nPages >= DENSO ? 'denso' : 'leve';
 
@@ -46,7 +47,7 @@ export default function Livro() {
       ...(editing ?? { id: uid(), createdAt: now }),
       title: title.trim(), author: author.trim() || undefined, pages: Math.max(1, nPages || 1),
       page: Math.max(0, parseInt(page, 10) || 0), why: why.trim() || undefined, status,
-      kind: shownKind, kindManual, cover: cover || undefined, isbn: editing?.isbn ?? p.isbn ?? undefined, updatedAt: now,
+      kind: shownKind, kindManual, cover: cover || undefined, isbn: editing?.isbn ?? (p.isbn || undefined), updatedAt: now,
       ...(status === 'lendo' && !editing?.startedAt ? { startedAt: now } : {}),
       ...(status === 'lido' && !editing?.finishedAt ? { finishedAt: now } : {}),
     } as Book;
@@ -71,6 +72,10 @@ export default function Livro() {
             {input(author, setAuthor, { placeholder: 'Opcional' })}
           </View>
         </Row>
+        <View style={{ gap: 6 }}>
+          <Txt k="label">{cover ? 'Trocar a capa' : 'Sem capa? Adicione a sua'}</Txt>
+          <CoverPicker cover={cover} onChange={setCover} />
+        </View>
         <Card>
           <Row>
             <View style={[s.grow, { gap: 6 }]}>

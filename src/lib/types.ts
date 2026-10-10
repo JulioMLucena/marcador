@@ -47,10 +47,19 @@ export interface Settings {
 
 export type SoundId = 'nenhum' | 'chuva' | 'ondas' | 'marrom';
 
+export interface BookList {
+  id: string;
+  name: string;
+  emoji?: string;
+  bookIds: string[];
+  createdAt: number;
+}
+
 export interface Data {
   books: Book[];
   sessions: Session[];
   settings: Settings;
+  lists: BookList[];
 }
 
 export const DEFAULT_SETTINGS: Settings = {

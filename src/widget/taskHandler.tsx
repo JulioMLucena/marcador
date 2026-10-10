@@ -4,5 +4,5 @@ import { renderWidgetFor } from './refresh';
 
 export async function widgetTaskHandler({ widgetAction, renderWidget }: WidgetTaskHandlerProps) {
   if (widgetAction === 'WIDGET_DELETED') return;
-  renderWidget(renderWidgetFor(await loadData()));
+  renderWidget(await renderWidgetFor(await loadData()));
 }

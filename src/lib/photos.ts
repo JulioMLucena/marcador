@@ -24,3 +24,14 @@ export function dropPhoto(uri?: string | null) {
     if (f.exists) f.delete();
   } catch {}
 }
+
+/** Guarda uma capa escolhida pelo usuário, no tamanho certo para a estante e o widget. */
+export async function keepCover(uri: string) {
+  const ref = await ImageManipulator.manipulate(uri).resize({ width: 600 }).renderAsync();
+  const out = await ref.saveAsync({ compress: 0.85, format: SaveFormat.JPEG });
+  const d = new Directory(Paths.document, 'capas');
+  d.create({ idempotent: true, intermediates: true });
+  const dest = new File(d, `${uid()}.jpg`);
+  new File(out.uri).moveSync(dest);
+  return dest.uri;
+}

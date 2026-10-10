@@ -1,8 +1,10 @@
-import { FlexWidget, TextWidget } from 'react-native-android-widget';
+import { FlexWidget, ImageWidget, TextWidget } from 'react-native-android-widget';
 import { hue } from '../lib/theme';
 
 export interface WidgetData {
   title: string | null;
+  /** Capa local (file://) do livro atual. */
+  cover?: string;
   page: number;
   pages: number;
   streak: number;
@@ -49,7 +51,20 @@ export function ReadingWidget({ d, dark }: { d: WidgetData; dark: boolean }) {
       clickActionData={{ uri: 'marcador://ler' }}
       style={{ height: 'match_parent', width: 'match_parent', backgroundColor: bg, borderRadius: 20, flexDirection: 'row' }}
     >
-      <FlexWidget style={{ width: 10, height: 'match_parent', backgroundColor: hslHex(h, 45 + (h % 4) * 7, 34 + (h % 3) * 6), borderTopLeftRadius: 20, borderBottomLeftRadius: 20 }} />
+      {d.cover ? (
+        <FlexWidget style={{ height: 'match_parent', paddingLeft: 12, paddingVertical: 12, justifyContent: 'center' }}>
+          <ImageWidget
+            // o pacote aceita file:// no Android, só o tipo não declara
+            image={d.cover as `https:${string}`}
+            imageWidth={64}
+            imageHeight={96}
+            radius={6}
+            resizeMode="cover"
+          />
+        </FlexWidget>
+      ) : (
+        <FlexWidget style={{ width: 10, height: 'match_parent', backgroundColor: hslHex(h, 45 + (h % 4) * 7, 34 + (h % 3) * 6), borderTopLeftRadius: 20, borderBottomLeftRadius: 20 }} />
+      )}
       <FlexWidget style={{ flex: 1, height: 'match_parent', padding: 14, justifyContent: 'space-between' }}>
         <FlexWidget style={{ width: 'match_parent' }}>
           <TextWidget text={d.title} maxLines={1} truncate="END" style={{ fontSize: 16, color: ink, fontWeight: '700' }} />

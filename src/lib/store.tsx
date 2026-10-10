@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { syncReminder } from './notify';
 import { refreshWidget } from '../widget/refresh';
-import { DEFAULT_SETTINGS, type Book, type Data, type Session, type Settings } from './types';
+import { DEFAULT_SETTINGS, type Book, type BookList, type Data, type Session, type Settings } from './types';
 
 export const DATA_KEY = 'marcador.data.v1';
 const TIMER_KEY = 'marcador.timer.v1';
@@ -30,10 +30,10 @@ export async function loadData(): Promise<Data> {
     const raw = await AsyncStorage.getItem(DATA_KEY);
     if (raw) {
       const d = JSON.parse(raw);
-      return { books: d.books || [], sessions: d.sessions || [], settings: { ...DEFAULT_SETTINGS, ...(d.settings || {}) } };
+      return { books: d.books || [], sessions: d.sessions || [], lists: d.lists || [], settings: { ...DEFAULT_SETTINGS, ...(d.settings || {}) } };
     }
   } catch {}
-  return { books: [], sessions: [], settings: { ...DEFAULT_SETTINGS } };
+  return { books: [], sessions: [], lists: [], settings: { ...DEFAULT_SETTINGS } };
 }
 
 /** Trecho em preparo: texto (digitado ou lido da foto) e foto da página. */
@@ -52,6 +52,8 @@ interface Store {
   saveBook: (b: Book) => void;
   deleteBook: (id: string) => void;
   saveSession: (s: Session) => void;
+  saveList: (l: BookList) => void;
+  deleteList: (id: string) => void;
   setSettings: (p: Partial<Settings>) => void;
   setTimer: (t: Timer | null) => void;
   setFinish: (f: Finish | null) => void;
@@ -62,7 +64,7 @@ const Ctx = createContext<Store | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
-  const [data, setData] = useState<Data>({ books: [], sessions: [], settings: { ...DEFAULT_SETTINGS } });
+  const [data, setData] = useState<Data>({ books: [], sessions: [], lists: [], settings: { ...DEFAULT_SETTINGS } });
   const [timer, setTimerState] = useState<Timer | null>(null);
   const [finish, setFinish] = useState<Finish | null>(null);
   const [draft, setDraft] = useState<Draft>({ note: '', photo: null });
@@ -102,7 +104,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [update],
   );
   const deleteBook = useCallback(
-    (id: string) => update((d) => ({ ...d, books: d.books.filter((b) => b.id !== id), sessions: d.sessions.filter((s) => s.bookId !== id) })),
+    (id: string) => update((d) => ({ ...d, books: d.books.filter((b) => b.id !== id), sessions: d.sessions.filter((s) => s.bookId !== id), lists: d.lists.map((l) => ({ ...l, bookIds: l.bookIds.filter((x) => x !== id) })) })),
     [update],
   );
   const saveSession = useCallback(
@@ -113,6 +115,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       })),
     [update],
   );
+  const saveList = useCallback(
+    (l: BookList) => update((d) => ({ ...d, lists: d.lists.some((x) => x.id === l.id) ? d.lists.map((x) => (x.id === l.id ? l : x)) : [...d.lists, l] })),
+    [update],
+  );
+  const deleteList = useCallback((id: string) => update((d) => ({ ...d, lists: d.lists.filter((l) => l.id !== id) })), [update]);
   const setSettings = useCallback((p: Partial<Settings>) => update((d) => ({ ...d, settings: { ...d.settings, ...p } })), [update]);
   const setTimer = useCallback((t: Timer | null) => {
     setTimerState(t);
@@ -125,8 +132,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [data]);
 
   const value = useMemo(
-    () => ({ ready, data, current, timer, finish, draft, saveBook, deleteBook, saveSession, setSettings, setTimer, setFinish, setDraft }),
-    [ready, data, current, timer, finish, draft, saveBook, deleteBook, saveSession, setSettings, setTimer],
+    () => ({ ready, data, current, timer, finish, draft, saveBook, deleteBook, saveSession, saveList, deleteList, setSettings, setTimer, setFinish, setDraft }),
+    [ready, data, current, timer, finish, draft, saveBook, deleteBook, saveSession, saveList, deleteList, setSettings, setTimer],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

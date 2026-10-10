@@ -7,7 +7,8 @@ import { addDays, dayKey, DOW, fmtMinutes, fmtTime, longDate } from '../../lib/d
 import { daysAway, forecast, minutesByDay, moodAlert, streak } from '../../lib/stats';
 import { pctOf, queueOf, readingOf, useStore } from '../../lib/store';
 import { F, useColors } from '../../lib/theme';
-import { kindOf } from '../../lib/types';
+import { kindOf, type Book } from '../../lib/types';
+import { Recs } from '../../components/Recs';
 
 export default function Hoje() {
   const c = useColors();
@@ -42,17 +43,48 @@ export default function Hoje() {
   );
 
   if (!b) {
+    const pick = data.books.filter((x) => x.status === 'fila' || x.status === 'pausado').sort((x, y) => (x.status === y.status ? x.createdAt - y.createdAt : x.status === 'pausado' ? -1 : 1));
+    const begin = (x: Book) => {
+      const now = Date.now();
+      saveBook({ ...x, status: 'lendo', startedAt: x.startedAt ?? now, updatedAt: now });
+      setSettings({ currentId: x.id });
+    };
     return (
       <Screen>
         {header}
-        <Card style={{ alignItems: 'center', paddingVertical: 28, gap: 14 }}>
-          <Txt k="h2" style={{ textAlign: 'center' }}>Qual livro está na sua mesa de cabeceira?</Txt>
-          <Txt k="muted" style={{ textAlign: 'center' }}>
-            Aponte a câmera para o código de barras atrás do livro e o Marcador puxa capa, título e páginas.
-          </Txt>
-          <Btn title="Escanear livro" icon="📷" big onPress={() => router.push('/scan')} style={{ alignSelf: 'stretch' }} />
-          <Btn title="Digitar à mão" kind="link" onPress={() => router.push('/livro')} />
-        </Card>
+        {pick.length ? (
+          <Card style={{ gap: 14 }}>
+            <View style={{ gap: 4 }}>
+              <Txt k="h2">Não tem nenhuma leitura?</Txt>
+              <Txt k="muted">Escolha um livro da sua estante. Toque na capa e ele vira a leitura de hoje.</Txt>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+              {pick.slice(0, 6).map((x) => (
+                <Pressable key={x.id} onPress={() => begin(x)} style={{ width: '30%', gap: 6 }} accessibilityRole="button" accessibilityLabel={`Começar ${x.title}`}>
+                  <Cover title={x.title} author={x.author} uri={x.cover} width={96} />
+                  <Txt k="small" lines={2} style={{ color: c.ink, fontFamily: F.semi }}>{x.title}</Txt>
+                  <Txt k="small" style={{ fontSize: 12 }}>
+                    {x.status === 'pausado' ? `Pausado na p. ${x.page || 0}` : `${x.pages} pág · ${kindOf(x)}`}
+                  </Txt>
+                </Pressable>
+              ))}
+            </View>
+            <Row style={{ justifyContent: 'center', gap: 16 }}>
+              <Btn title="Escanear outro" icon="📷" kind="ghost" onPress={() => router.push('/scan')} />
+              <Btn title="Digitar à mão" kind="link" onPress={() => router.push('/editar')} />
+            </Row>
+          </Card>
+        ) : (
+          <Card style={{ alignItems: 'center', paddingVertical: 28, gap: 14 }}>
+            <Txt k="h2" style={{ textAlign: 'center' }}>Qual livro está na sua mesa de cabeceira?</Txt>
+            <Txt k="muted" style={{ textAlign: 'center' }}>
+              Aponte a câmera para o código de barras atrás do livro e o Marcador puxa capa, título e páginas.
+            </Txt>
+            <Btn title="Escanear livro" icon="📷" big onPress={() => router.push('/scan')} style={{ alignSelf: 'stretch' }} />
+            <Btn title="Digitar à mão" kind="link" onPress={() => router.push('/editar')} />
+          </Card>
+        )}
+        <Recs />
       </Screen>
     );
   }
@@ -97,7 +129,7 @@ export default function Hoje() {
 
       <Card>
         <Row style={{ alignItems: 'flex-start', gap: 14 }}>
-          <Pressable onPress={() => router.push({ pathname: '/livro', params: { id: b.id } })}>
+          <Pressable onPress={() => router.push({ pathname: '/livro/[id]', params: { id: b.id } })}>
             <Cover title={b.title} author={b.author} uri={b.cover} width={78} />
           </Pressable>
           <View style={[s.grow, { gap: 4 }]}>
@@ -186,6 +218,8 @@ export default function Hoje() {
           })}
         </View>
       </Card>
+
+      <Recs />
     </Screen>
   );
 }
