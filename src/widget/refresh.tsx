@@ -41,6 +41,13 @@ export async function widgetData({ books, sessions, settings }: Data): Promise<W
   return {
     title: b?.title ?? null,
     cover: await widgetCover(b?.cover),
+    next: b
+      ? undefined
+      : await Promise.all(
+          [...books.filter((x) => x.status === 'pausado'), ...books.filter((x) => x.status === 'fila')]
+            .slice(0, 2)
+            .map(async (x) => ({ title: x.title, cover: await widgetCover(x.cover) })),
+        ),
     page: b?.page || 0,
     pages: b?.pages || 0,
     hook: b?.hook,

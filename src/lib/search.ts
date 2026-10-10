@@ -10,6 +10,9 @@ export interface Found {
   categories: string[];
   /** Id do volume no Google Books, para abrir a ficha completa. */
   gid?: string;
+  /** Obra e edição no Open Library, quando a busca veio de lá. */
+  olKey?: string;
+  olEdition?: string;
 }
 
 const https = (u?: string) => u?.replace('http://', 'https://').replace('&edge=curl', '');
@@ -51,17 +54,77 @@ export function toFound(it: any): Found & { language?: string } {
   };
 }
 
+/** Chave grátis do Google Books, opcional (vem do build). Sem ela, o Google divide uma cota com o mundo todo. */
+const KEY = process.env.EXPO_PUBLIC_GOOGLE_BOOKS_KEY;
+let googleOffUntil = 0;
+
 /**
- * Busca no Google Books. `q` segue a sintaxe deles (intitle:, inauthor:, subject:).
- * Com `pt`, só volta edição em português: título, capa e sinopse já em pt.
+ * Chama o Google Books. Quando ele recusa (cota estourada) ou demora, devolve null e
+ * passa 10 minutos sem tentar, para as próximas buscas irem direto ao Open Library.
+ */
+export async function google(path: string, ms = 2500): Promise<any> {
+  if (Date.now() < googleOffUntil) return null;
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), ms);
+  try {
+    const r = await fetch(`https://www.googleapis.com/books/v1/${path}${KEY ? `&key=${KEY}` : ''}`, { signal: ctl.signal });
+    if (r.status === 429 || r.status === 403) googleOffUntil = Date.now() + 10 * 60e3;
+    return r.ok ? await r.json() : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/**
+ * Busca livros. `q` segue a sintaxe do Google (intitle:, inauthor:, subject:).
+ * Com `pt`, só volta obra com edição em português, já com o título e a capa dessa edição.
+ * Se o Google não responder, a mesma busca vai para o Open Library.
  */
 export async function googleBooks(q: string, { pt = false, max = 20, order }: { pt?: boolean; max?: number; order?: 'newest' } = {}): Promise<Found[]> {
-  const j = await getJSON(
-    `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=${max}&printType=books&country=BR&fields=${FIELDS}` +
+  const j = await google(
+    `volumes?q=${encodeURIComponent(q)}&maxResults=${max}&printType=books&country=BR&fields=${FIELDS}` +
       (pt ? '&langRestrict=pt' : '') + (order ? `&orderBy=${order}` : ''),
   );
-  const all = (j?.items || []).map(toFound);
+  if (!j) return openLibraryQuery(q, { pt, max, order });
+  const all = (j.items || []).map(toFound);
   return pt ? all.filter((b: { language?: string }) => !b.language || b.language.startsWith('pt')) : all;
+}
+
+const OL_FIELDS = 'key,title,author_name,number_of_pages_median,cover_i,isbn,subject,editions,editions.title,editions.cover_i,editions.isbn,editions.language,editions.number_of_pages,editions.key';
+
+/** Traduz a busca do Google para o Open Library e pega a edição em português de cada obra. */
+export async function openLibraryQuery(q: string, { pt = false, max = 20, order }: { pt?: boolean; max?: number; order?: 'newest' } = {}): Promise<Found[]> {
+  const take = (k: string) => q.match(new RegExp(`${k}:(?:"([^"]+)"|(\\S+))`))?.slice(1).find(Boolean);
+  const title = take('intitle'), author = take('inauthor'), subject = take('subject');
+  const params = new URLSearchParams();
+  if (title) params.set('title', title);
+  if (author) params.set('author', author);
+  if (subject) params.set('subject', subject.toLowerCase());
+  if (!title && !author && !subject) params.set('q', q);
+  if (pt) {
+    params.set('q', [params.get('q'), 'language:por'].filter(Boolean).join(' '));
+    params.set('lang', 'pt');
+  }
+  if (order === 'newest') params.set('sort', 'new');
+  const j = await getJSON(`https://openlibrary.org/search.json?${params}&limit=${max}&fields=${OL_FIELDS}`, 3500).catch(() => null);
+  return (j?.docs || []).map((v: any) => {
+    // com lang=pt o Open Library põe a edição em português primeiro
+    const e = v.editions?.docs?.[0];
+    const ptEdition = pt && e?.language?.includes('por') ? e : undefined;
+    const cover = ptEdition?.cover_i ?? v.cover_i;
+    return {
+      title: ptEdition?.title ?? v.title,
+      author: (v.author_name || []).slice(0, 2).join(', ') || undefined,
+      pages: ptEdition?.number_of_pages ?? v.number_of_pages_median ?? undefined,
+      cover: cover ? `https://covers.openlibrary.org/b/id/${cover}-L.jpg` : undefined,
+      isbn: (ptEdition?.isbn ?? v.isbn ?? []).find((x: string) => x.length === 13),
+      categories: (v.subject || []).slice(0, 5),
+      olKey: v.key,
+      olEdition: ptEdition?.key,
+    };
+  });
 }
 
 export async function openLibrary(params: string, limit = 20): Promise<(Found & { key?: string })[]> {

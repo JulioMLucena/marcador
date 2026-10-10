@@ -11,7 +11,7 @@ import { openObra } from '../lib/nav';
 import { useStore } from '../lib/store';
 import { F, useColors } from '../lib/theme';
 
-type P = { gid?: string; title: string; author?: string; cover?: string; pages?: string; isbn?: string; reason?: string };
+type P = { olKey?: string; olEdition?: string; gid?: string; title: string; author?: string; cover?: string; pages?: string; isbn?: string; reason?: string };
 
 function Stars({ value }: { value: number }) {
   const c = useColors();
@@ -38,12 +38,13 @@ export default function ObraScreen() {
 
   // o cabeçalho aparece na hora com o que veio da lista; o resto chega em paralelo
   const base = { title: p.title, author: p.author || undefined, cover: p.cover || undefined, pages: Number(p.pages) || undefined, isbn: p.isbn || undefined };
-  const shown = { ...base, ...(o ?? {}) };
+  // campos vazios da ficha não apagam o que já veio da lista (capa, páginas)
+  const shown = { ...base, ...Object.fromEntries(Object.entries(o ?? {}).filter(([, v]) => v != null)) } as typeof base & Partial<Obra>;
   const owned = data.books.find((b) => norm(b.title.split(':')[0]) === norm(shown.title.split(':')[0]));
 
   useEffect(() => {
     let alive = true;
-    getObra({ gid: p.gid || undefined, title: p.title, author: p.author })
+    getObra({ gid: p.gid || undefined, title: p.title, author: p.author, olKey: p.olKey || undefined, olEdition: p.olEdition || undefined })
       .then((r) => {
         if (!alive) return;
         if (!r) return setFailed(true);

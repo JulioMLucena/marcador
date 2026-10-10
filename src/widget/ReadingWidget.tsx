@@ -11,6 +11,8 @@ export interface WidgetData {
   todayMin: number;
   goal: number;
   hook?: string;
+  /** Sem leitura: os próximos da estante (fila e pausados) para chamar de volta. */
+  next?: { title: string; cover?: string }[];
 }
 
 type Hex = `#${string}`;
@@ -35,13 +37,53 @@ export function ReadingWidget({ d, dark, height = 150 }: { d: WidgetData; dark: 
   const amber: Hex = dark ? '#E2A84A' : '#B9781A';
   const accent: Hex = dark ? '#73C3A3' : '#1F5C4A';
   if (!d.title) {
+    const next = (d.next ?? []).slice(0, 2);
+    const nh = Math.max(80, Math.round(height - 48));
+    const nw = Math.round(nh * (2 / 3));
     return (
       <FlexWidget
         clickAction="OPEN_APP"
-        style={{ height: 'match_parent', width: 'match_parent', backgroundColor: bg, borderRadius: 20, padding: 16, justifyContent: 'center' }}
+        style={{
+          height: 'match_parent', width: 'match_parent', borderRadius: 20, padding: 16, flexDirection: 'row', alignItems: 'center',
+          backgroundGradient: { from: '#1F5C4A', to: '#0B261E', orientation: 'TL_BR' },
+        }}
       >
-        <TextWidget text="Marcador" style={{ fontSize: 16, color: ink, fontWeight: '700' }} />
-        <TextWidget text="Toque para escolher o livro que você está lendo" style={{ fontSize: 13, color: muted }} />
+        <FlexWidget style={{ flex: 1, height: 'match_parent', justifyContent: 'space-between' }}>
+          <TextWidget text="MARCADOR" style={{ fontSize: 11, color: '#E2A84A', fontWeight: '700', letterSpacing: 0.12 }} />
+          <FlexWidget style={{ width: 'match_parent' }}>
+            <TextWidget text={next.length ? 'Bora pro próximo?' : 'Nenhum livro na mesa'} maxLines={2} style={{ fontSize: 18, color: '#FFFFFF', fontWeight: '700' }} />
+            <TextWidget
+              text={next.length ? 'Toque e escolha um da estante' : 'Toque e escaneie o que vai ler'}
+              maxLines={2}
+              style={{ fontSize: 12.5, color: '#CFE3DA', marginTop: 3 }}
+            />
+          </FlexWidget>
+          <TextWidget
+            text={d.streak ? `🔥 ${d.streak} ${d.streak === 1 ? 'dia' : 'dias'} seguidos` : '📖 5 minutos hoje já contam'}
+            maxLines={1}
+            style={{ fontSize: 12, color: '#FFFFFF', fontWeight: '600' }}
+          />
+        </FlexWidget>
+        {next.length ? (
+          <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 10 }}>
+            {next.map((n, i) =>
+              n.cover ? (
+                <FlexWidget key={i} style={{ marginLeft: i ? 6 : 0 }}>
+                  <ImageWidget image={n.cover as `https:${string}`} imageWidth={nw} imageHeight={nh} radius={6} resizeMode="cover" />
+                </FlexWidget>
+              ) : (
+                <FlexWidget
+                  key={i}
+                  style={{ marginLeft: i ? 6 : 0, width: nw, height: nh, borderRadius: 6, padding: 6, backgroundColor: hslHex(hue(n.title), 45, 36) }}
+                >
+                  <TextWidget text={n.title} maxLines={4} style={{ fontSize: 10, color: '#FFFFFF', fontWeight: '700' }} />
+                </FlexWidget>
+              ),
+            )}
+          </FlexWidget>
+        ) : (
+          <TextWidget text="📚" style={{ fontSize: 46, marginLeft: 10 }} />
+        )}
       </FlexWidget>
     );
   }

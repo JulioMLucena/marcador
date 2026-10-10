@@ -11,6 +11,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # opcional: chave grátis do Google Books (Settings > Secrets > GOOGLE_BOOKS_KEY); sem ela o app usa a cota pública e o Open Library
+      EXPO_PUBLIC_GOOGLE_BOOKS_KEY: ${{ secrets.GOOGLE_BOOKS_KEY }}
     steps:
       - uses: actions/checkout@v4
 

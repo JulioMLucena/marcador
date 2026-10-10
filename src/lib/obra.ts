@@ -1,4 +1,4 @@
-import { getJSON, googleBooks, norm, toFound, type Found } from './search';
+import { getJSON, google, googleBooks, norm, openLibraryQuery, toFound, type Found } from './search';
 
 /** Ficha completa de um livro que você ainda não tem. Tudo de fontes abertas, sem IA. */
 export interface Obra extends Found {
@@ -31,17 +31,54 @@ function toObra(it: any): Obra {
   };
 }
 
-/** Pelo id do Google Books ou, sem ele, a melhor edição em português pelo título. */
-export async function getObra(p: { gid?: string; title: string; author?: string }): Promise<Obra | null> {
+/** Pelo id do Google Books ou, sem ele, a melhor edição em português pelo título. Sem Google, vai ao Open Library. */
+export async function getObra(p: { gid?: string; title: string; author?: string; olKey?: string; olEdition?: string }): Promise<Obra | null> {
   if (p.gid) {
-    const j = await getJSON(`https://www.googleapis.com/books/v1/volumes/${p.gid}?country=BR`, 3000).catch(() => null);
+    const j = await google(`volumes/${p.gid}?country=BR`, 3000);
     if (j?.volumeInfo) return toObra(j);
   }
   const a = p.author?.split(',')[0].trim();
   const q = `intitle:"${p.title.split(':')[0]}"${a ? ` inauthor:"${a}"` : ''}`;
-  const j = await getJSON(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&langRestrict=pt&country=BR&maxResults=5`, 3000).catch(() => null);
+  const j = await google(`volumes?q=${encodeURIComponent(q)}&langRestrict=pt&country=BR&maxResults=5`, 3000);
   const it = (j?.items || []).find((x: any) => x.volumeInfo?.language?.startsWith('pt')) ?? j?.items?.[0];
-  return it ? toObra(it) : null;
+  if (it) return toObra(it);
+  return fromOpenLibrary(p, q);
+}
+
+const olText = (d: any) => (typeof d === 'string' ? d : d?.value)?.replace(/\r/g, '').replace(/\(\[source\]\[\d+\]\)|\[source\]\[\d+\]|-{3,}[\s\S]*$/g, '').trim();
+// sinopse em inglês tem estas palavras curtas o tempo todo; em português, quase nunca
+const looksEnglish = (t: string) => (t.match(/\b(the|and|of|his|her|with)\b/gi) || []).length > 4;
+
+/** Ficha montada com o Open Library: obra, edição em português e a sinopse que tiver. */
+async function fromOpenLibrary(p: { title: string; author?: string; olKey?: string; olEdition?: string }, q: string): Promise<Obra | null> {
+  let { olKey, olEdition } = p;
+  let base: Found | undefined;
+  if (!olKey) {
+    base = (await openLibraryQuery(q, { pt: true, max: 3 }))[0] ?? (await openLibraryQuery(q, { max: 3 }))[0];
+    if (!base) return null;
+    olKey = base.olKey;
+    olEdition = base.olEdition;
+  }
+  const [work, ed] = await Promise.all([
+    olKey ? getJSON(`https://openlibrary.org${olKey}.json`, 3000).catch(() => null) : null,
+    olEdition ? getJSON(`https://openlibrary.org${olEdition}.json`, 3000).catch(() => null) : null,
+  ]);
+  const ptDesc = olText(ed?.description);
+  const workDesc = olText(work?.description);
+  const description = ptDesc || workDesc;
+  return {
+    title: ed?.title ?? base?.title ?? p.title,
+    author: base?.author ?? p.author,
+    pages: ed?.number_of_pages ?? base?.pages,
+    cover: base?.cover,
+    isbn: ed?.isbn_13?.[0] ?? base?.isbn,
+    categories: base?.categories ?? (work?.subjects || []).slice(0, 5),
+    olKey,
+    olEdition,
+    description: description && looksEnglish(description) ? `(Sinopse disponível só em inglês)\n\n${description}` : description,
+    publisher: ed?.publishers?.[0],
+    year: ed?.publish_date?.match(/\d{4}/)?.[0],
+  };
 }
 
 export interface Extra {

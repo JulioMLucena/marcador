@@ -6,7 +6,7 @@ import { Cover } from './Cover';
 import { Txt } from './ui';
 
 /** Grade de 3 colunas de livros que você não tem; o toque abre a ficha. */
-export function BookGrid({ items }: { items: (Pick<Found, 'gid' | 'title' | 'author' | 'cover' | 'pages' | 'isbn'> & { reason?: string })[] }) {
+export function BookGrid({ items }: { items: (Pick<Found, 'gid' | 'title' | 'author' | 'cover' | 'pages' | 'isbn' | 'olKey' | 'olEdition'> & { reason?: string })[] }) {
   const c = useColors();
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 16 }}>
