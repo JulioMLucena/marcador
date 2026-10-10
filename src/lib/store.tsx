@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppState } from 'react-native';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { syncReminder } from './notify';
 import { refreshWidget } from '../widget/refresh';
+import { syncPriceTask } from './prices';
 import { DEFAULT_SETTINGS, type Book, type BookList, type Data, type Session, type Settings } from './types';
 
 export const DATA_KEY = 'marcador.data.v1';
@@ -82,12 +84,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
+  // o widget grava direto no armazenamento; ao voltar para o app, recarrega para não sobrescrever
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st !== 'active' || !loaded.current) return;
+      loadData().then((d) => setData((cur) => (JSON.stringify(cur) === JSON.stringify(d) ? cur : d)));
+    });
+    return () => sub.remove();
+  }, []);
+
   // grava e propaga para lembrete e widget sempre que os dados mudam
   useEffect(() => {
     if (!loaded.current) return;
     AsyncStorage.setItem(DATA_KEY, JSON.stringify(data)).catch(() => {});
     syncReminder(data).catch(() => {});
     refreshWidget(data).catch(() => {});
+    syncPriceTask(data.settings.priceAlert && data.books.some((b) => b.status === 'fila')).catch(() => {});
   }, [data]);
 
   const update = useCallback((fn: (d: Data) => Data) => setData((d) => fn(d)), []);

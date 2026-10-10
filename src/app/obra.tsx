@@ -8,6 +8,7 @@ import { uid } from '../lib/dates';
 import { brl, getExtra, getObra, getOffers, moreByAuthor, reviewLinks, storeLinks, type Extra, type Obra, type Offer } from '../lib/obra';
 import { guessFormat, norm, sized, type Found } from '../lib/search';
 import { openObra } from '../lib/nav';
+import { priceOf, recordOffers, type PriceSeen } from '../lib/prices';
 import { useStore } from '../lib/store';
 import { F, useColors } from '../lib/theme';
 
@@ -35,6 +36,7 @@ export default function ObraScreen() {
   const [more, setMore] = useState<Found[] | null>(null);
   const [fullText, setFullText] = useState(false);
   const [queued, setQueued] = useState(false);
+  const [seen, setSeen] = useState<PriceSeen | undefined>();
 
   // o cabeçalho aparece na hora com o que veio da lista; o resto chega em paralelo
   const base = { title: p.title, author: p.author || undefined, cover: p.cover || undefined, pages: Number(p.pages) || undefined, isbn: p.isbn || undefined };
@@ -49,7 +51,12 @@ export default function ObraScreen() {
         if (!alive) return;
         if (!r) return setFailed(true);
         setO(r);
-        getOffers(r).then((x) => alive && setOffers(x)).catch(() => alive && setOffers(storeLinks(r)));
+        getOffers(r).then((x) => {
+          if (!alive) return;
+          setOffers(x);
+          // guarda o menor preço para o aviso de queda
+          recordOffers(base, x).then(() => priceOf(base)).then((p) => alive && setSeen(p)).catch(() => {});
+        }).catch(() => alive && setOffers(storeLinks(r)));
       })
       .catch(() => alive && setFailed(true));
     getExtra(base).then((x) => alive && setExtra(x)).catch(() => alive && setExtra({}));
@@ -182,6 +189,15 @@ export default function ObraScreen() {
             <Ionicons name="open-outline" size={16} color={c.muted} />
           </Pressable>
         ))}
+        {seen && (queued || owned?.status === 'fila') && data.settings.priceAlert ? (
+          <View style={{ marginTop: 10, backgroundColor: c.amberSoft, borderRadius: 10, padding: 10 }}>
+            <Txt k="small" style={{ color: c.ink }}>
+              🔔 Menor preço que já vi: <Txt k="small" style={{ fontFamily: F.semi, color: c.ink }}>{brl(seen.low)}</Txt> ({seen.store}). Te aviso se baixar.
+            </Txt>
+          </View>
+        ) : !owned && !queued ? (
+          <Txt k="small" style={{ marginTop: 8 }}>Toque em Quero ler e eu te aviso quando o preço baixar.</Txt>
+        ) : null}
         <Txt k="small" style={{ marginTop: 8 }}>Só lojas grandes. O preço aparece quando a loja deixa consultar; nas outras, o toque abre a busca do livro lá.</Txt>
       </Card>
 

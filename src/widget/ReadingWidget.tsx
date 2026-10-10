@@ -110,26 +110,32 @@ export function ReadingWidget({ d, dark, height = 150 }: { d: WidgetData; dark: 
       ) : (
         <FlexWidget style={{ width: 10, height: 'match_parent', backgroundColor: hslHex(h, 45 + (h % 4) * 7, 34 + (h % 3) * 6), borderTopLeftRadius: 20, borderBottomLeftRadius: 20 }} />
       )}
-      <FlexWidget style={{ flex: 1, height: 'match_parent', padding: 14, justifyContent: 'space-between' }}>
+      <FlexWidget style={{ flex: 1, height: 'match_parent', padding: 12, justifyContent: 'space-between' }}>
         <FlexWidget style={{ width: 'match_parent' }}>
           <TextWidget text={d.title} maxLines={1} truncate="END" style={{ fontSize: 16, color: ink, fontWeight: '700' }} />
           <TextWidget
-            text={d.hook ? d.hook : `Página ${d.page} de ${d.pages}`}
-            maxLines={2}
+            text={`p. ${d.page} de ${d.pages} · 🔥 ${d.streak} ${d.streak === 1 ? 'dia' : 'dias'}${done ? ' · meta ✓' : ''}`}
+            maxLines={1}
             truncate="END"
-            style={{ fontSize: 12, color: muted, marginTop: 2 }}
+            style={{ fontSize: 12.5, color: done ? accent : muted, marginTop: 2, fontWeight: '600' }}
           />
         </FlexWidget>
         <FlexWidget style={{ width: 'match_parent', height: 8, flexDirection: 'row', borderRadius: 4, backgroundColor: track }}>
           <FlexWidget style={{ flex: pct, height: 8, backgroundColor: amber, borderRadius: 4 }} />
           <FlexWidget style={{ flex: 100 - pct, height: 8 }} />
         </FlexWidget>
-        <FlexWidget style={{ width: 'match_parent', flexDirection: 'row', justifyContent: 'space-between' }}>
-          <TextWidget text={`🔥 ${d.streak} ${d.streak === 1 ? 'dia' : 'dias'}`} style={{ fontSize: 13, color: ink, fontWeight: '600' }} />
-          <TextWidget
-            text={done ? 'Meta de hoje ✓' : `Hoje ${Math.round(d.todayMin)}/${d.goal} min`}
-            style={{ fontSize: 13, color: done ? accent : muted, fontWeight: '600' }}
-          />
+        <FlexWidget style={{ width: 'match_parent', flexDirection: 'row' }}>
+          {[5, 10].map((n, i) => (
+            // cada botão soma páginas sem abrir o app (tratado no taskHandler)
+            <FlexWidget
+              key={n}
+              clickAction="ADD_PAGES"
+              clickActionData={{ n }}
+              style={{ flex: 1, height: 34, marginLeft: i ? 8 : 0, borderRadius: 17, backgroundColor: i ? accent : track, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <TextWidget text={`+${n} pág`} style={{ fontSize: 13.5, fontWeight: '700', color: i ? bg : ink }} />
+            </FlexWidget>
+          ))}
         </FlexWidget>
       </FlexWidget>
     </FlexWidget>

@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
-import { Pressable, View } from 'react-native';
+import { useState } from 'react';
+import { Modal, Pressable, View } from 'react-native';
 import { BookEdge } from '../../components/BookEdge';
 import { Cover } from '../../components/Cover';
 import { Btn, Card, Row, Screen, Txt, s } from '../../components/ui';
@@ -21,6 +22,8 @@ export default function Hoje() {
   const st = streak(sessions);
   const away = daysAway(sessions);
   const nextUp = queueOf(data)[0];
+  // toque sem querer numa capa não pode virar leitura: pede confirmação antes
+  const [ask, setAsk] = useState<Book | null>(null);
 
   const start = (minutes: number) => {
     if (!b) return;
@@ -48,6 +51,7 @@ export default function Hoje() {
       const now = Date.now();
       saveBook({ ...x, status: 'lendo', startedAt: x.startedAt ?? now, updatedAt: now });
       setSettings({ currentId: x.id });
+      setAsk(null);
     };
     return (
       <Screen>
@@ -56,11 +60,11 @@ export default function Hoje() {
           <Card style={{ gap: 14 }}>
             <View style={{ gap: 4 }}>
               <Txt k="h2">Não tem nenhuma leitura?</Txt>
-              <Txt k="muted">Escolha um livro da sua estante. Toque na capa e ele vira a leitura de hoje.</Txt>
+              <Txt k="muted">Escolha um livro da sua estante. Toque na capa do que você vai começar.</Txt>
             </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
               {pick.slice(0, 6).map((x) => (
-                <Pressable key={x.id} onPress={() => begin(x)} style={{ width: '30%', gap: 6 }} accessibilityRole="button" accessibilityLabel={`Começar ${x.title}`}>
+                <Pressable key={x.id} onPress={() => setAsk(x)} style={{ width: '30%', gap: 6 }} accessibilityRole="button" accessibilityLabel={`Começar ${x.title}?`}>
                   <Cover title={x.title} author={x.author} uri={x.cover} width={96} />
                   <Txt k="small" lines={2} style={{ color: c.ink, fontFamily: F.semi }}>{x.title}</Txt>
                   <Txt k="small" style={{ fontSize: 12 }}>
@@ -85,6 +89,37 @@ export default function Hoje() {
           </Card>
         )}
         <Recs />
+        <Modal visible={!!ask} transparent animationType="fade" onRequestClose={() => setAsk(null)}>
+          <Pressable onPress={() => setAsk(null)} style={{ flex: 1, backgroundColor: '#000a', justifyContent: 'flex-end' }}>
+            {ask ? (
+              <Pressable onPress={() => {}} style={{ backgroundColor: c.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 22, paddingBottom: 34, gap: 16 }}>
+                <Row style={{ gap: 16, alignItems: 'flex-start' }}>
+                  <Cover title={ask.title} author={ask.author} uri={ask.cover} width={78} />
+                  <View style={[s.grow, { gap: 4 }]}>
+                    <Txt k="label">{ask.status === 'pausado' ? 'Voltar a ler?' : 'Começar a ler?'}</Txt>
+                    <Txt k="h2" lines={3}>{ask.title}</Txt>
+                    <Txt k="small">
+                      {ask.status === 'pausado' ? `Você parou na página ${ask.page || 0} de ${ask.pages}.` : `${ask.pages} páginas. Ele vira a sua leitura de hoje.`}
+                    </Txt>
+                  </View>
+                </Row>
+                <Btn big title={ask.status === 'pausado' ? 'Voltei a ler' : 'Comecei a ler'} icon="📖" onPress={() => begin(ask)} />
+                <Row style={{ justifyContent: 'center', gap: 20 }}>
+                  <Btn title="Agora não" kind="link" onPress={() => setAsk(null)} />
+                  <Btn
+                    title="Ver o livro"
+                    kind="link"
+                    onPress={() => {
+                      const id = ask.id;
+                      setAsk(null);
+                      router.push({ pathname: '/livro/[id]', params: { id } });
+                    }}
+                  />
+                </Row>
+              </Pressable>
+            ) : null}
+          </Pressable>
+        </Modal>
       </Screen>
     );
   }

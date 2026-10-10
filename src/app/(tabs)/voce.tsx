@@ -126,6 +126,20 @@ export default function Voce() {
             }}
           />
         </Row>
+        <Row style={{ justifyContent: 'space-between' }}>
+          <View style={s.grow}>
+            <Txt>Avisar quando baixar de preço</Txt>
+            <Txt k="small">Confiro os livros da sua fila umas duas vezes por dia no Mercado Livre e na Google Play.</Txt>
+          </View>
+          <Switch
+            value={settings.priceAlert}
+            trackColor={{ true: c.accent, false: c.line }}
+            onValueChange={async (v) => {
+              if (v && !(await askNotificationPermission())) return;
+              setSettings({ priceAlert: v });
+            }}
+          />
+        </Row>
         <Stepper
           label="Hora de ler"
           value={timeMinutes}

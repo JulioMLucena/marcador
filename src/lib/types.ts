@@ -48,6 +48,8 @@ export interface Settings {
   sound: SoundId;
   currentId?: string | null;
   yearGoal: number;
+  /** Avisar quando um livro da fila baixa de preço. */
+  priceAlert: boolean;
 }
 
 export type SoundId = 'nenhum' | 'chuva' | 'ondas' | 'marrom';
@@ -75,6 +77,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sound: 'chuva',
   currentId: null,
   yearGoal: 12,
+  priceAlert: true,
 };
 
 export const MOODS: Record<Mood, { emoji: string; label: string }> = {
