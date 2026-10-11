@@ -1,16 +1,17 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Sharing from 'expo-sharing';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, Text, ToastAndroid, useWindowDimensions, View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
-import { Cover } from '../components/Cover';
+import { Book3D } from '../components/Book3D';
 import { Btn, Row, Screen, Txt } from '../components/ui';
+import { cardPalette, coverRgb, fallbackRgb } from '../lib/coverColor';
 import { daysBetween, fmtMinutes, MONTHS } from '../lib/dates';
 import { useStore } from '../lib/store';
 import { F, useColors } from '../lib/theme';
 
-// mesma identidade da retrospectiva: o cartão vai para fora do app, então não segue o tema
-const K = { bg: '#0F1D17', panel: '#17291F', ink: '#F1EEE4', muted: '#9DB3A6', amber: '#E8B04E', accent: '#73C3A3' };
+// o cartão vai para fora do app, então não segue o tema: as cores saem da capa do livro
+const K = { ink: '#F1EEE4', muted: '#F1EEE4b3' };
 const toast = (m: string) => Platform.OS === 'android' && ToastAndroid.show(m, ToastAndroid.SHORT);
 const short = (t: number) => {
   const d = new Date(t);
@@ -28,6 +29,16 @@ export default function Compartilhar() {
   const [pick, setPick] = useState<number | null | undefined>(undefined);
   const card = useRef<View>(null);
   const b = data.books.find((x) => x.id === id);
+  const [pal, setPal] = useState(() => cardPalette(fallbackRgb(b?.title ?? '')));
+  const cover = b?.cover;
+  const title = b?.title ?? '';
+  useEffect(() => {
+    let live = true;
+    coverRgb(cover, title).then((rgb) => live && setPal(cardPalette(rgb)));
+    return () => {
+      live = false;
+    };
+  }, [cover, title]);
   const W = Math.min(width - 32, 420);
   const H = Math.round((W * 16) / 9);
   const u = W / 360;
@@ -72,7 +83,7 @@ export default function Compartilhar() {
   };
 
   const stat = (v: string, l: string) => (
-    <View style={{ flex: 1, backgroundColor: K.panel, borderRadius: 12 * u, paddingVertical: 10 * u, paddingHorizontal: 8 * u, alignItems: 'center' }}>
+    <View style={{ flex: 1, backgroundColor: pal.panel, borderRadius: 12 * u, paddingVertical: 10 * u, paddingHorizontal: 8 * u, alignItems: 'center' }}>
       <Text style={{ color: K.ink, fontFamily: F.displayBold, fontSize: 21 * u }}>{v}</Text>
       <Text style={{ color: K.muted, fontFamily: F.medium, fontSize: 10.5 * u }}>{l}</Text>
     </View>
@@ -86,31 +97,21 @@ export default function Compartilhar() {
       </Row>
 
       <View style={{ alignItems: 'center' }}>
-        <View ref={card} collapsable={false} style={{ width: W, height: H, backgroundColor: K.bg, borderRadius: 18 * u, padding: 24 * u, justifyContent: 'space-between', overflow: 'hidden' }}>
-          <View style={{ position: 'absolute', top: 70 * u, left: W / 2 - 160 * u, width: 320 * u, height: 320 * u, borderRadius: 160 * u, backgroundColor: K.amber, opacity: 0.13 }} />
-          {[...Array(14)].map((_, i) => (
-            // confete parado: a festa também aparece na imagem
-            <View
-              key={i}
-              style={{
-                position: 'absolute', top: ((i * 53) % 330) * u + 40 * u, left: ((i * 97) % 330) * u,
-                width: (i % 3 ? 7 : 10) * u, height: (i % 2 ? 14 : 7) * u, borderRadius: 2 * u,
-                backgroundColor: [K.amber, K.accent, '#E07A5F', '#F1EEE4'][i % 4], opacity: 0.75, transform: [{ rotate: `${i * 37}deg` }],
-              }}
-            />
+        <View ref={card} collapsable={false} style={{ width: W, height: H, backgroundColor: pal.bg, borderRadius: 18 * u, padding: 24 * u, justifyContent: 'space-between', overflow: 'hidden' }}>
+          {/* luz atrás do livro, na cor da capa: círculos empilhados fazem o degradê */}
+          {[200, 170, 140, 112, 86].map((r) => (
+            <View key={r} style={{ position: 'absolute', top: 245 * u - r * u, left: W / 2 - r * u, width: 2 * r * u, height: 2 * r * u, borderRadius: r * u, backgroundColor: pal.glow, opacity: 0.09 }} />
           ))}
 
           <View style={{ alignItems: 'center', gap: 2 * u }}>
             <Text style={{ color: K.muted, fontFamily: F.semi, fontSize: 11 * u, letterSpacing: 2.5 * u }}>LIVRO TERMINADO</Text>
-            <Text style={{ color: K.amber, fontFamily: F.displayItalic, fontSize: 30 * u }}>Terminei!</Text>
+            <Text style={{ color: pal.accent, fontFamily: F.displayItalic, fontSize: 28 * u }}>Terminei!</Text>
           </View>
 
-          <View style={{ alignItems: 'center', gap: 14 * u }}>
-            <View style={{ transform: [{ rotate: '-4deg' }], shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 18, elevation: 12 }}>
-              <Cover title={b.title} author={b.author} uri={b.cover} width={150 * u} />
-            </View>
+          <View style={{ alignItems: 'center', gap: 12 * u }}>
+            <Book3D title={b.title} author={b.author} uri={b.cover} width={(quote ? 140 : 160) * u} />
             <View style={{ alignItems: 'center', gap: 3 * u }}>
-              <Text style={{ color: K.ink, fontFamily: F.displayBold, fontSize: 24 * u, lineHeight: 30 * u, textAlign: 'center' }} numberOfLines={3}>{b.title}</Text>
+              <Text style={{ color: K.ink, fontFamily: F.displayBold, fontSize: 23 * u, lineHeight: 29 * u, textAlign: 'center' }} numberOfLines={2}>{b.title}</Text>
               {b.author ? <Text style={{ color: K.muted, fontFamily: F.body, fontSize: 13.5 * u }} numberOfLines={1}>{b.author}</Text> : null}
             </View>
           </View>
@@ -127,7 +128,7 @@ export default function Compartilhar() {
           </View>
 
           {quote ? (
-            <View style={{ borderLeftWidth: 3 * u, borderLeftColor: K.amber, paddingLeft: 12 * u }}>
+            <View style={{ borderLeftWidth: 3 * u, borderLeftColor: pal.accent, paddingLeft: 12 * u }}>
               <Text style={{ color: K.ink, fontFamily: F.displayItalic, fontSize: 14.5 * u, lineHeight: 21 * u }} numberOfLines={4}>“{quote}”</Text>
             </View>
           ) : null}
@@ -137,7 +138,7 @@ export default function Compartilhar() {
               {b.startedAt ? `${short(b.startedAt)} → ${short(end)}` : short(end)}
               {rated ? ` · 😍 ${Math.round((good / rated) * 100)}% com vontade` : ''}
             </Text>
-            <Text style={{ color: K.accent, fontFamily: F.displayBold, fontSize: 13 * u }}>Marcador</Text>
+            <Text style={{ color: pal.accent, fontFamily: F.displayBold, fontSize: 13 * u }}>Marcador</Text>
           </View>
         </View>
       </View>
