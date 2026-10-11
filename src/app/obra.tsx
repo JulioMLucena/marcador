@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, View } from 'react-native';
 import { Cover } from '../components/Cover';
 import { Btn, Card, Row, Screen, Txt, s } from '../components/ui';
-import { uid } from '../lib/dates';
 import { brl, getExtra, getObra, getOffers, moreByAuthor, reviewLinks, storeLinks, type Extra, type Obra, type Offer } from '../lib/obra';
 import { guessFormat, norm, sized, type Found } from '../lib/search';
 import { openObra } from '../lib/nav';
@@ -28,7 +27,7 @@ function Stars({ value }: { value: number }) {
 export default function ObraScreen() {
   const c = useColors();
   const p = useLocalSearchParams<P>();
-  const { data, saveBook } = useStore();
+  const { data, saveList } = useStore();
   const [o, setO] = useState<Obra | null>(null);
   const [failed, setFailed] = useState(false);
   const [extra, setExtra] = useState<Extra | null>(null);
@@ -71,10 +70,13 @@ export default function ObraScreen() {
     title: shown.title, author: shown.author, pages: shown.pages || 1, page: 0, cover: shown.cover, isbn: shown.isbn,
     format: guessFormat({ title: shown.title, categories: o?.categories ?? [] }), genres: o?.categories,
   });
+  // livro que você não tem vai para a lista "Quero comprar" (a estante é só do que você tem)
+  const wantList = data.lists.find((l) => l.wants?.some((w) => norm(w.title.split(':')[0]) === norm(shown.title.split(':')[0])));
   const queue = () => {
-    const now = Date.now();
     const b = asBook();
-    saveBook({ id: uid(), ...b, format: b.format === 'livro' ? undefined : b.format, status: 'fila', createdAt: now, updatedAt: now });
+    const list = data.lists.find((l) => l.id === 'comprar') ?? { id: 'comprar', name: 'Quero comprar', emoji: '🛒', bookIds: [], wants: [], createdAt: Date.now() };
+    const want = { title: b.title, author: b.author, cover: b.cover, pages: shown.pages, isbn: b.isbn, gid: p.gid || undefined, olKey: p.olKey || undefined, olEdition: p.olEdition || undefined, categories: o?.categories, addedAt: Date.now() };
+    saveList({ ...list, wants: [want, ...(list.wants ?? [])] });
     setQueued(true);
   };
   const haveIt = () => {
@@ -128,7 +130,16 @@ export default function ObraScreen() {
         <Btn title="Já está na sua estante" icon="📚" kind="ghost" onPress={() => router.replace({ pathname: '/livro/[id]', params: { id: owned.id } })} />
       ) : (
         <Row>
-          <Btn title={queued ? 'Na fila ✓' : 'Quero ler'} icon={queued ? undefined : '🔖'} onPress={queue} disabled={queued} style={s.grow} />
+          {queued || wantList ? (
+            <Btn
+              title={`Na lista ${wantList?.name ?? 'Quero comprar'} ✓`}
+              kind="ghost"
+              onPress={() => router.push({ pathname: '/lista/[id]', params: { id: wantList?.id ?? 'comprar' } })}
+              style={s.grow}
+            />
+          ) : (
+            <Btn title="Quero comprar" icon="🛒" onPress={queue} style={s.grow} />
+          )}
           <Btn title="Já tenho" kind="ghost" onPress={haveIt} style={s.grow} />
         </Row>
       )}
@@ -200,14 +211,14 @@ export default function ObraScreen() {
             <Ionicons name="open-outline" size={16} color={c.muted} />
           </Pressable>
         ))}
-        {seen && (queued || owned?.status === 'fila') && data.settings.priceAlert ? (
+        {seen && (queued || wantList) && !owned && data.settings.priceAlert ? (
           <View style={{ marginTop: 10, backgroundColor: c.amberSoft, borderRadius: 10, padding: 10 }}>
             <Txt k="small" style={{ color: c.ink }}>
               🔔 Menor preço que já vi: <Txt k="small" style={{ fontFamily: F.semi, color: c.ink }}>{brl(seen.low)}</Txt> ({seen.store}). Te aviso se baixar.
             </Txt>
           </View>
-        ) : !owned && !queued ? (
-          <Txt k="small" style={{ marginTop: 8 }}>Toque em Quero ler e eu te aviso quando o preço baixar.</Txt>
+        ) : !owned && !queued && !wantList ? (
+          <Txt k="small" style={{ marginTop: 8 }}>Toque em Quero comprar e eu te aviso quando o preço baixar.</Txt>
         ) : null}
         <Txt k="small" style={{ marginTop: 8 }}>Só lojas grandes. O preço aparece quando a loja deixa consultar; nas outras, o toque abre a busca do livro lá.</Txt>
       </Card>

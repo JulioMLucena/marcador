@@ -152,7 +152,7 @@ export default function Voce() {
         <Row style={{ justifyContent: 'space-between' }}>
           <View style={s.grow}>
             <Txt>Avisar quando baixar de preço</Txt>
-            <Txt k="small">Confiro a sua fila e os livros pra comprar das listas umas duas vezes por dia no Mercado Livre e na Google Play.</Txt>
+            <Txt k="small">Confiro os livros pra comprar das suas listas umas duas vezes por dia no Mercado Livre e na Google Play.</Txt>
           </View>
           <Switch
             value={settings.priceAlert}

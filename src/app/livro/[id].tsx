@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { BookEdge } from '../../components/BookEdge';
 import { Cover } from '../../components/Cover';
@@ -9,9 +9,6 @@ import { CoverSearch } from '../../components/CoverSearch';
 import { Btn, Card, Row, Screen, Txt, s } from '../../components/ui';
 import { DOW, fmtMinutes, fmtTime, MONTHS } from '../../lib/dates';
 import { forecast } from '../../lib/stats';
-import { openObra } from '../../lib/nav';
-import { brl } from '../../lib/obra';
-import { priceOf, type PriceSeen } from '../../lib/prices';
 import { pctOf, useStore } from '../../lib/store';
 import { F, useColors } from '../../lib/theme';
 import { kindOf, MOODS, type BookStatus, type Mood } from '../../lib/types';
@@ -40,11 +37,6 @@ export default function LivroDetalhe() {
   const b = data.books.find((x) => x.id === id);
   const [allHistory, setAllHistory] = useState(false);
   const [coverSearch, setCoverSearch] = useState(false);
-  const [seen, setSeen] = useState<PriceSeen | undefined>();
-  useEffect(() => {
-    if (b?.status === 'fila') priceOf(b).then(setSeen).catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [b?.status, b?.title]);
 
   if (!b) {
     return (
@@ -184,20 +176,6 @@ export default function LivroDetalhe() {
           </View>
         ) : null}
       </Card>
-      {b.status === 'fila' ? (
-        <Pressable onPress={() => openObra(b)} accessibilityRole="button">
-          <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Txt style={{ fontSize: 24 }}>{seen ? '🔔' : '🛒'}</Txt>
-            <View style={[s.grow, { gap: 2 }]}>
-              <Txt style={{ fontFamily: F.semi }}>{seen ? `Menor preço: ${brl(seen.low)} (${seen.store})` : 'Ver preços nas lojas'}</Txt>
-              <Txt k="small">
-                {data.settings.priceAlert ? 'Está na fila: te aviso quando baixar.' : 'Ligue o aviso de preço em Você > Ajustes.'}
-              </Txt>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={c.muted} />
-          </Card>
-        </Pressable>
-      ) : null}
       {b.status === 'lido' ? (
         <Btn big icon="📸" title="Compartilhar nos stories" onPress={() => router.push({ pathname: '/compartilhar', params: { id: b.id } })} />
       ) : null}

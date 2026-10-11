@@ -6,7 +6,7 @@ import { Cover } from '../../components/Cover';
 import { Btn, Card, Row, Screen, Txt, s } from '../../components/ui';
 import { uid } from '../../lib/dates';
 import { openObra } from '../../lib/nav';
-import { findBooks, guessFormat, norm, sized, type Found } from '../../lib/search';
+import { searchBooks, guessFormat, norm, sized, type Found } from '../../lib/search';
 import { useStore } from '../../lib/store';
 import { F, useColors } from '../../lib/theme';
 import type { Book, BookStatus, Want } from '../../lib/types';
@@ -33,7 +33,7 @@ export default function Lista() {
     if (q.trim().length < 3) return setHits(null);
     let alive = true;
     setHits(null);
-    const t = setTimeout(() => findBooks(q).then((r) => alive && setHits(r)).catch(() => alive && setHits([])), 600);
+    const t = setTimeout(() => searchBooks(q, (r) => alive && r.length && setHits(r)).then((r) => alive && setHits(r)).catch(() => alive && setHits([])), 400);
     return () => {
       alive = false;
       clearTimeout(t);

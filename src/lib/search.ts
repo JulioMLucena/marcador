@@ -83,12 +83,12 @@ export async function google(path: string, ms = 2500): Promise<any> {
  * Com `pt`, só volta obra com edição em português, já com o título e a capa dessa edição.
  * Se o Google não responder, a mesma busca vai para o Open Library.
  */
-export async function googleBooks(q: string, { pt = false, max = 20, order }: { pt?: boolean; max?: number; order?: 'newest' } = {}): Promise<Found[]> {
+export async function googleBooks(q: string, { pt = false, max = 20, order, start = 0 }: { pt?: boolean; max?: number; order?: 'newest'; start?: number } = {}): Promise<Found[]> {
   const j = await google(
     `volumes?q=${encodeURIComponent(q)}&maxResults=${max}&printType=books&country=BR&fields=${FIELDS}` +
-      (pt ? '&langRestrict=pt' : '') + (order ? `&orderBy=${order}` : ''),
+      (pt ? '&langRestrict=pt' : '') + (order ? `&orderBy=${order}` : '') + (start ? `&startIndex=${start}` : ''),
   );
-  if (!j) return openLibraryQuery(q, { pt, max, order });
+  if (!j) return openLibraryQuery(q, { pt, max, order, start });
   const all = (j.items || []).map(toFound);
   return pt ? all.filter((b: { language?: string }) => !b.language || b.language.startsWith('pt')) : all;
 }
@@ -96,7 +96,7 @@ export async function googleBooks(q: string, { pt = false, max = 20, order }: { 
 const OL_FIELDS = 'key,title,author_name,number_of_pages_median,cover_i,isbn,subject,editions,editions.title,editions.cover_i,editions.isbn,editions.language,editions.number_of_pages,editions.key';
 
 /** Traduz a busca do Google para o Open Library e pega a edição em português de cada obra. */
-export async function openLibraryQuery(q: string, { pt = false, max = 20, order }: { pt?: boolean; max?: number; order?: 'newest' } = {}): Promise<Found[]> {
+export async function openLibraryQuery(q: string, { pt = false, max = 20, order, start = 0 }: { pt?: boolean; max?: number; order?: 'newest'; start?: number } = {}): Promise<Found[]> {
   const take = (k: string) => q.match(new RegExp(`${k}:(?:"([^"]+)"|(\\S+))`))?.slice(1).find(Boolean);
   const title = take('intitle'), author = take('inauthor'), subject = take('subject');
   const params = new URLSearchParams();
@@ -109,6 +109,7 @@ export async function openLibraryQuery(q: string, { pt = false, max = 20, order 
     params.set('lang', 'pt');
   }
   if (order === 'newest') params.set('sort', 'new');
+  if (start) params.set('offset', String(start));
   const j = await getJSON(`https://openlibrary.org/search.json?${params}&limit=${max}&fields=${OL_FIELDS}`, 3500).catch(() => null);
   return (j?.docs || []).map((v: any) => {
     // com lang=pt o Open Library põe a edição em português primeiro
@@ -153,25 +154,65 @@ export function uniqueByTitle<T extends { title: string }>(list: T[], skip = new
 }
 
 /** Sugestões enquanto o título é digitado: português primeiro, depois qualquer edição. */
-export async function findBooks(title: string): Promise<Found[]> {
-  const t = title.trim();
-  if (t.length < 3) return [];
-  const [pt, any] = await Promise.all([
-    googleBooks(`intitle:${t}`, { pt: true, max: 8 }).catch(() => []),
-    googleBooks(`intitle:${t}`, { max: 8 }).catch(() => []),
-  ]);
-  let list = [...pt, ...any];
-  if (!list.length) list = await openLibrary(`title=${encodeURIComponent(t)}`, 5).catch(() => []);
-  const seen = new Set<string>();
-  return list
-    .filter((b) => {
-      const k = norm(`${b.title} ${b.author ?? ''}`);
-      if (!b.title || seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    })
-    .slice(0, 6);
+/** Nota de quão bem o livro bate com o que foi digitado: título igual primeiro, depois título que contém tudo, depois autor. */
+function score(b: Found & { language?: string }, q: string) {
+  const t = norm(b.title);
+  const words = q.split(' ').filter((w) => w.length > 1);
+  const a = norm(b.author ?? '');
+  let n = 0;
+  if (t === q || t.split(' ').slice(0, words.length).join(' ') === q) n += 6;
+  else if (t.startsWith(q)) n += 5;
+  else if (words.every((w) => t.includes(w))) n += 3;
+  else if (words.every((w) => `${t} ${a}`.includes(w))) n += 2;
+  else n -= 4;
+  if (b.cover) n += 1;
+  if (!b.language || b.language.startsWith('pt')) n += 1;
+  return n;
 }
+
+/**
+ * Busca de verdade pelo que a pessoa digitou (título ou autor): três fontes ao mesmo tempo,
+ * cada uma com tempo curto, e a lista vai aparecendo conforme as respostas chegam.
+ */
+export async function searchBooks(text: string, onPartial?: (r: Found[]) => void): Promise<Found[]> {
+  const raw = text.trim();
+  const q = norm(raw);
+  if (q.length < 3) return [];
+  const pool: (Found & { language?: string })[] = [];
+  const rank = () => {
+    const seen = new Set<string>();
+    return pool
+      .map((b) => ({ b, n: score(b, q) }))
+      .filter((x) => x.n > 0)
+      .sort((x, y) => y.n - x.n)
+      .map((x) => x.b)
+      .filter((b) => {
+        const k = norm(`${b.title.split(':')[0]} ${b.author?.split(',')[0] ?? ''}`);
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      })
+      .slice(0, 8);
+  };
+  const add = (list: (Found & { language?: string })[]) => {
+    pool.push(...list);
+    onPartial?.(rank());
+  };
+  const g = (query: string, pt: boolean) =>
+    google(`volumes?q=${encodeURIComponent(query)}&maxResults=12&printType=books&country=BR&fields=${FIELDS}${pt ? '&langRestrict=pt' : ''}`, 2500)
+      .then((j) => add((j?.items || []).map(toFound)))
+      .catch(() => {});
+  await Promise.all([
+    g(`intitle:"${raw}"`, true),
+    g(raw, true),
+    g(raw, false),
+    openLibraryQuery(raw, { pt: true, max: 12 }).then(add).catch(() => {}),
+  ]);
+  return rank();
+}
+
+/** Compatível com quem já chamava findBooks. */
+export const findBooks = (title: string) => searchBooks(title);
 
 /** Todas as capas que acharmos para o livro: edições do Google Books e do Open Library. */
 export async function findCovers(title: string, author?: string, isbn?: string): Promise<string[]> {
@@ -238,11 +279,27 @@ export const TOPICS: Topic[] = [
   { id: 'ciencia', color: '#13817A', label: 'Ciência', emoji: '🔬', q: 'subject:science', match: /^science|psychology|nature/i, not: FICTION },
   { id: 'autoajuda', color: '#5E8C31', label: 'Desenvolvimento pessoal', emoji: '🌱', q: 'subject:"self-help"', match: /self-help|personal growth/i, not: FICTION },
   { id: 'negocios', color: '#2F4858', label: 'Negócios', emoji: '💼', q: 'subject:business', match: /business|economics/i, not: FICTION },
+  { id: 'filosofia', color: '#3D5A80', label: 'Filosofia', emoji: '🦉', q: 'subject:philosophy', match: /philosoph/i, keep: /philosoph|filosofia|ethics|stoic|metaphysics|logic/i, not: FICTION },
+  { id: 'politica', color: '#8C2F39', label: 'Política', emoji: '⚖️', q: 'subject:"political science"', match: /politic/i, keep: /politic|política|government|democracy|socialism|capitalism|state, the/i, not: FICTION },
   { id: 'poesia', color: '#9A4F8C', label: 'Poesia', emoji: '🪶', q: 'subject:poetry', match: /poetry/i, keep: /poetry|poesia|poems/i },
 ];
 
 const DAY = 864e5;
 const topicKey = (id: string) => `marcador.topic.v3.${id}`;
+
+/** O livro é mesmo deste tópico? (para não ficção, exige a categoria e barra romance) */
+export const topicFits = (t: Topic, x: Found) =>
+  (!t.keep || x.categories.some((c) => t.keep!.test(c))) && !(t.not && x.categories.some((c) => t.not!.test(c)));
+
+/** Mais livros do tópico, para o botão Ver mais: a página seguinte das duas fontes. */
+export async function topicMore(t: Topic, page: number): Promise<Found[]> {
+  const start = page * 40;
+  const [a, b] = await Promise.all([
+    googleBooks(t.q, { pt: true, max: 40, start }).catch(() => []),
+    googleBooks(t.q, { pt: true, max: 40, order: 'newest', start }).catch(() => []),
+  ]);
+  return uniqueByTitle([...a, ...b].filter((x) => x.cover && topicFits(t, x)));
+}
 
 /** Livros de um tópico, só edições em português. Guarda por um dia. */
 export async function topicBooks(t: Topic, force = false): Promise<Found[]> {
@@ -258,8 +315,7 @@ export async function topicBooks(t: Topic, force = false): Promise<Found[]> {
     googleBooks(t.q, { pt: true, max: 40 }).catch(() => []),
     googleBooks(t.q, { pt: true, max: 40, order: 'newest' }).catch(() => []),
   ]);
-  const fits = (x: Found) => (!t.keep || x.categories.some((c) => t.keep!.test(c))) && !(t.not && x.categories.some((c) => t.not!.test(c)));
-  const items = uniqueByTitle([...a, ...b].filter((x) => x.cover && fits(x))).slice(0, 30);
+  const items = uniqueByTitle([...a, ...b].filter((x) => x.cover && topicFits(t, x))).slice(0, 30);
   if (items.length) AsyncStorage.setItem(topicKey(t.id), JSON.stringify({ at: Date.now(), items })).catch(() => {});
   return items;
 }

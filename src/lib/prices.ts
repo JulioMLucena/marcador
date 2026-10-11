@@ -57,12 +57,12 @@ export async function recordOffers(b: Pick<Book, 'title' | 'author'>, offers: Of
   return { best, prev, dropped };
 }
 
-/** Consulta os livros da fila e avisa quando algum baixa de preço. */
+/** Consulta os livros pra comprar e avisa quando algum baixa de preço. */
 export async function checkQueuePrices() {
   const data = await loadData();
   if (!data.settings.priceAlert) return 0;
-  // fila da estante e os livros "pra comprar" das listas
-  const all: Pick<Book, 'title' | 'author' | 'cover'>[] = [...data.books.filter((b) => b.status === 'fila'), ...data.lists.flatMap((l) => l.wants ?? [])];
+  // só os livros "pra comprar" das listas: os da estante você já tem
+  const all: Pick<Book, 'title' | 'author' | 'cover'>[] = data.lists.flatMap((l) => l.wants ?? []);
   const queue = all.filter((b, i) => all.findIndex((x) => idOf(x) === idOf(b)) === i).slice(0, 15);
   let n = 0;
   for (const b of queue) {

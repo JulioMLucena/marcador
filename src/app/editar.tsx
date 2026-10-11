@@ -8,7 +8,7 @@ import { uid } from '../lib/dates';
 import { askNotificationPermission } from '../lib/notify';
 import { useStore } from '../lib/store';
 import { F, useColors } from '../lib/theme';
-import { findBooks, guessFormat, type Found } from '../lib/search';
+import { searchBooks, guessFormat, type Found } from '../lib/search';
 import { DENSO, kindOf, type Book, type BookStatus, type Format, type Kind } from '../lib/types';
 
 type P = { id?: string; isbn?: string; title?: string; author?: string; pages?: string; cover?: string; status?: BookStatus; format?: Format; genres?: string };
@@ -44,8 +44,8 @@ export default function Livro() {
     let alive = true;
     setHints(null);
     const t = setTimeout(() => {
-      findBooks(title).then((r) => alive && setHints(r)).catch(() => alive && setHints([]));
-    }, 600);
+      searchBooks(title, (r) => alive && r.length && setHints(r)).then((r) => alive && setHints(r)).catch(() => alive && setHints([]));
+    }, 400);
     return () => {
       alive = false;
       clearTimeout(t);
