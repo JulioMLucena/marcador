@@ -99,7 +99,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     AsyncStorage.setItem(DATA_KEY, JSON.stringify(data)).catch(() => {});
     syncReminder(data).catch(() => {});
     refreshWidget(data).catch(() => {});
-    syncPriceTask(data.settings.priceAlert && data.books.some((b) => b.status === 'fila')).catch(() => {});
+    syncPriceTask(data.settings.priceAlert && (data.books.some((b) => b.status === 'fila') || data.lists.some((l) => l.wants?.length))).catch(() => {});
   }, [data]);
 
   const update = useCallback((fn: (d: Data) => Data) => setData((d) => fn(d)), []);

@@ -134,11 +134,22 @@ export default function ObraScreen() {
       )}
 
       <Card>
-        <Txt k="label">Sinopse</Txt>
-        {o?.description ? (
+        <Txt k="label">{o?.descEnglish && extra?.wiki ? 'Sinopse · resumo da Wikipédia' : 'Sinopse'}</Txt>
+        {o?.description && !o.descEnglish ? (
           <>
             <Txt lines={fullText ? undefined : 7} style={{ lineHeight: 23 }}>{o.description}</Txt>
             {o.description.length > 380 ? <Btn title={fullText ? 'Mostrar menos' : 'Ler mais'} kind="link" onPress={() => setFullText(!fullText)} style={{ alignSelf: 'flex-start' }} /> : null}
+          </>
+        ) : o?.descEnglish && extra?.wiki ? (
+          // a editora só cadastrou em inglês: o resumo da Wikipédia em português entra no lugar
+          <Txt style={{ lineHeight: 23 }}>{extra.wiki.text}</Txt>
+        ) : o?.descEnglish && !extra ? (
+          <ActivityIndicator color={c.accent} style={{ alignSelf: 'flex-start' }} />
+        ) : o?.descEnglish ? (
+          <>
+            <Txt k="small">Não achei sinopse em português para este livro.</Txt>
+            {fullText ? <Txt style={{ lineHeight: 23, color: c.muted }}>{o.description}</Txt> : null}
+            <Btn title={fullText ? 'Esconder' : 'Ver a sinopse em inglês'} kind="link" onPress={() => setFullText(!fullText)} style={{ alignSelf: 'flex-start' }} />
           </>
         ) : o || failed ? (
           <Txt k="small">A editora não cadastrou sinopse para esta edição.</Txt>
@@ -203,7 +214,7 @@ export default function ObraScreen() {
 
       <Card>
         <Txt k="label">O que dizem</Txt>
-        {extra?.wiki ? (
+        {extra?.wiki && !o?.descEnglish ? (
           <View style={{ gap: 6 }}>
             <Txt k="small" style={{ fontFamily: F.semi, color: c.ink }}>Wikipédia</Txt>
             <Txt lines={6} style={{ fontSize: 15, lineHeight: 22 }}>{extra.wiki.text}</Txt>
@@ -211,7 +222,7 @@ export default function ObraScreen() {
           </View>
         ) : !extra ? (
           <ActivityIndicator color={c.accent} style={{ alignSelf: 'flex-start' }} />
-        ) : !anyRating ? (
+        ) : !anyRating && !(extra.wiki && o?.descEnglish) ? (
           <Txt k="small">Ainda não achei crítica aberta sobre este livro. Os links abaixo procuram resenhas de leitores e da imprensa.</Txt>
         ) : null}
         {reviews.map((r) => (

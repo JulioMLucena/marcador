@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
-import { Switch, View } from 'react-native';
+import { useState } from 'react';
+import { Linking, Switch, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { Heatmap } from '../../components/Heatmap';
 import { Btn, Card, Row, Screen, Txt, s } from '../../components/ui';
 import { fmtMinutes, fmtTime, MONTHS } from '../../lib/dates';
-import { askNotificationPermission } from '../../lib/notify';
+import { askNotificationPermission, testNotification } from '../../lib/notify';
 import { achievements, bestStreak, yearProgress } from '../../lib/stats';
 import { useStore } from '../../lib/store';
 import { F, useColors } from '../../lib/theme';
@@ -25,6 +26,7 @@ function Stepper({ label, value, onChange, min, max, step = 1, show }: { label: 
 export default function Voce() {
   const c = useColors();
   const { data, setSettings } = useStore();
+  const [test, setTest] = useState<'sent' | 'blocked' | null>(null);
   const { sessions, settings } = data;
   const totalMin = sessions.reduce((a, x) => a + (x.minutes || 0), 0);
   const pages = sessions.reduce((a, x) => a + Math.max(0, (x.toPage || 0) - (x.fromPage || 0)), 0);
@@ -126,10 +128,31 @@ export default function Voce() {
             }}
           />
         </Row>
+        <Row style={{ gap: 12 }}>
+          <Btn
+            title={test === 'sent' ? 'Chega em 5 segundos…' : 'Testar notificação'}
+            icon="🔔"
+            kind="ghost"
+            disabled={test === 'sent'}
+            onPress={async () => {
+              const r = await testNotification().catch(() => 'blocked' as const);
+              setTest(r === 'ok' ? 'sent' : 'blocked');
+              if (r === 'ok') setTimeout(() => setTest(null), 8000);
+            }}
+          />
+        </Row>
+        {test === 'blocked' ? (
+          <View style={{ gap: 4 }}>
+            <Txt k="small" style={{ color: c.warn }}>O Android está bloqueando as notificações do Marcador.</Txt>
+            <Btn title="Abrir ajustes do celular" kind="link" onPress={() => Linking.openSettings()} style={{ alignSelf: 'flex-start' }} />
+          </View>
+        ) : test === 'sent' ? (
+          <Txt k="small">Pode bloquear a tela para ver como chega.</Txt>
+        ) : null}
         <Row style={{ justifyContent: 'space-between' }}>
           <View style={s.grow}>
             <Txt>Avisar quando baixar de preço</Txt>
-            <Txt k="small">Confiro os livros da sua fila umas duas vezes por dia no Mercado Livre e na Google Play.</Txt>
+            <Txt k="small">Confiro a sua fila e os livros pra comprar das listas umas duas vezes por dia no Mercado Livre e na Google Play.</Txt>
           </View>
           <Switch
             value={settings.priceAlert}

@@ -25,7 +25,8 @@ export async function getJSON(url: string, ms = 2500): Promise<any> {
   const t = setTimeout(() => ctl.abort(), ms);
   try {
     const r = await fetch(url, { signal: ctl.signal });
-    return r.ok ? await r.json() : null;
+    // NFC junta letra e acento num caractere só ("a" + "~" vira "ã"); separados, a fonte desenha um buraco
+    return r.ok ? JSON.parse((await r.text()).normalize('NFC')) : null;
   } finally {
     clearTimeout(t);
   }
@@ -43,7 +44,7 @@ export function toFound(it: any): Found & { language?: string } {
   const img: string | undefined = v.imageLinks?.thumbnail || v.imageLinks?.smallThumbnail;
   return {
     gid: it.id,
-    title: [v.title, v.subtitle].filter(Boolean).join(': '),
+    title: [v.title, v.subtitle].filter(Boolean).join(': ').normalize('NFC'),
     author: (v.authors || []).join(', ') || undefined,
     pages: v.pageCount || undefined,
     // fife pede uma versão maior da mesma imagem
@@ -69,7 +70,7 @@ export async function google(path: string, ms = 2500): Promise<any> {
   try {
     const r = await fetch(`https://www.googleapis.com/books/v1/${path}${KEY ? `&key=${KEY}` : ''}`, { signal: ctl.signal });
     if (r.status === 429 || r.status === 403) googleOffUntil = Date.now() + 10 * 60e3;
-    return r.ok ? await r.json() : null;
+    return r.ok ? JSON.parse((await r.text()).normalize('NFC')) : null;
   } catch {
     return null;
   } finally {
@@ -115,12 +116,12 @@ export async function openLibraryQuery(q: string, { pt = false, max = 20, order 
     const ptEdition = pt && e?.language?.includes('por') ? e : undefined;
     const cover = ptEdition?.cover_i ?? v.cover_i;
     return {
-      title: ptEdition?.title ?? v.title,
+      title: String(ptEdition?.title ?? v.title).normalize('NFC'),
       author: (v.author_name || []).slice(0, 2).join(', ') || undefined,
       pages: ptEdition?.number_of_pages ?? v.number_of_pages_median ?? undefined,
       cover: cover ? `https://covers.openlibrary.org/b/id/${cover}-L.jpg` : undefined,
       isbn: (ptEdition?.isbn ?? v.isbn ?? []).find((x: string) => x.length === 13),
-      categories: (v.subject || []).slice(0, 5),
+      categories: (v.subject || []).slice(0, 15),
       olKey: v.key,
       olEdition: ptEdition?.key,
     };
@@ -210,7 +211,16 @@ export interface Topic {
   q: string;
   /** Categorias do Google Books que contam como este tópico na sua estante. */
   match: RegExp;
+  /** Para não ficção: o livro precisa ter uma categoria assim para entrar no tópico. */
+  keep?: RegExp;
+  /** E não pode ter nenhuma destas (romances que só citam história, por exemplo). */
+  not?: RegExp;
 }
+
+// gêneros de ficção: livro com qualquer um deles não entra nos tópicos de não ficção
+const FICTION = /fiction|novel|ficção|romance|juvenile|fantasy|children|literature|drama|ficcao/i;
+// história também não leva livro religioso nem de estratégia/poder que só cita guerras antigas
+const NOT_HISTORY = /fiction|novel|ficção|romance|juvenile|fantasy|children|literature|drama|bible|bíblia|religio|self-help|success|power \(|strategy|military art/i;
 
 export const TOPICS: Topic[] = [
   { id: 'ficcao', color: '#3E4C8A', label: 'Ficção', emoji: '📖', q: 'subject:fiction', match: /^fiction$|literary/i },
@@ -223,16 +233,16 @@ export const TOPICS: Topic[] = [
   { id: 'classicos', color: '#8A6D3B', label: 'Clássicos', emoji: '🏛️', q: 'subject:classics', match: /classic/i },
   { id: 'manga', color: '#D2453A', label: 'Mangá', emoji: '🗾', q: 'subject:manga', match: /manga/i },
   { id: 'hq', color: '#E0832B', label: 'Quadrinhos', emoji: '💥', q: 'subject:comics', match: /comic|graphic novel/i },
-  { id: 'historia', color: '#7A4E2D', label: 'História', emoji: '🏺', q: 'subject:history', match: /^history|world history/i },
-  { id: 'biografia', color: '#4E6A75', label: 'Biografias', emoji: '👤', q: 'subject:biography', match: /biograph|memoir/i },
-  { id: 'ciencia', color: '#13817A', label: 'Ciência', emoji: '🔬', q: 'subject:science', match: /^science|psychology|nature/i },
-  { id: 'autoajuda', color: '#5E8C31', label: 'Desenvolvimento pessoal', emoji: '🌱', q: 'subject:"self-help"', match: /self-help|personal growth/i },
-  { id: 'negocios', color: '#2F4858', label: 'Negócios', emoji: '💼', q: 'subject:business', match: /business|economics/i },
-  { id: 'poesia', color: '#9A4F8C', label: 'Poesia', emoji: '🪶', q: 'subject:poetry', match: /poetry/i },
+  { id: 'historia', color: '#7A4E2D', label: 'História', emoji: '🏺', q: 'subject:history', match: /^history|world history/i, keep: /^histor|histor(y|ia)\b|história/i, not: NOT_HISTORY },
+  { id: 'biografia', color: '#4E6A75', label: 'Biografias', emoji: '👤', q: 'subject:biography', match: /biograph|memoir/i, keep: /biograph|memoir|autobiog|biografia/i, not: FICTION },
+  { id: 'ciencia', color: '#13817A', label: 'Ciência', emoji: '🔬', q: 'subject:science', match: /^science|psychology|nature/i, not: FICTION },
+  { id: 'autoajuda', color: '#5E8C31', label: 'Desenvolvimento pessoal', emoji: '🌱', q: 'subject:"self-help"', match: /self-help|personal growth/i, not: FICTION },
+  { id: 'negocios', color: '#2F4858', label: 'Negócios', emoji: '💼', q: 'subject:business', match: /business|economics/i, not: FICTION },
+  { id: 'poesia', color: '#9A4F8C', label: 'Poesia', emoji: '🪶', q: 'subject:poetry', match: /poetry/i, keep: /poetry|poesia|poems/i },
 ];
 
 const DAY = 864e5;
-const topicKey = (id: string) => `marcador.topic.v2.${id}`;
+const topicKey = (id: string) => `marcador.topic.v3.${id}`;
 
 /** Livros de um tópico, só edições em português. Guarda por um dia. */
 export async function topicBooks(t: Topic, force = false): Promise<Found[]> {
@@ -248,7 +258,8 @@ export async function topicBooks(t: Topic, force = false): Promise<Found[]> {
     googleBooks(t.q, { pt: true, max: 40 }).catch(() => []),
     googleBooks(t.q, { pt: true, max: 40, order: 'newest' }).catch(() => []),
   ]);
-  const items = uniqueByTitle([...a, ...b].filter((x) => x.cover)).slice(0, 30);
+  const fits = (x: Found) => (!t.keep || x.categories.some((c) => t.keep!.test(c))) && !(t.not && x.categories.some((c) => t.not!.test(c)));
+  const items = uniqueByTitle([...a, ...b].filter((x) => x.cover && fits(x))).slice(0, 30);
   if (items.length) AsyncStorage.setItem(topicKey(t.id), JSON.stringify({ at: Date.now(), items })).catch(() => {});
   return items;
 }

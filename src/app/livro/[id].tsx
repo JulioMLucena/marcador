@@ -198,6 +198,9 @@ export default function LivroDetalhe() {
           </Card>
         </Pressable>
       ) : null}
+      {b.status === 'lido' ? (
+        <Btn big icon="📸" title="Compartilhar nos stories" onPress={() => router.push({ pathname: '/compartilhar', params: { id: b.id } })} />
+      ) : null}
       {b.status === 'lendo' ? <Btn big icon={timer ? '⏱️' : '📖'} title={timer ? 'Voltar para a leitura' : 'Ler agora'} onPress={readNow} /> : null}
 
       <Card>

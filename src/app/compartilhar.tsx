@@ -38,7 +38,8 @@ export default function Compartilhar() {
   const readDays = new Set(ss.map((s) => s.day)).size;
   const end = b.finishedAt ?? Date.now();
   const span = b.startedAt ? daysBetween(new Date(b.startedAt), new Date(end)) + 1 : readDays;
-  const perDay = Math.round(b.pages / Math.max(1, readDays || span));
+  // marcado como lido sem leituras registradas: sem ritmo para mostrar
+  const perDay = readDays || span ? String(Math.round(b.pages / Math.max(1, readDays || span))) : '–';
   const year = new Date(end).getFullYear();
   const nth = data.books.filter((x) => x.status === 'lido' && x.finishedAt && new Date(x.finishedAt).getFullYear() === year && x.finishedAt <= end).length || 1;
   const notes = [...ss].reverse().filter((s) => s.note).map((s) => s.note!);
@@ -121,7 +122,7 @@ export default function Compartilhar() {
             <View style={{ flexDirection: 'row', gap: 8 * u }}>
               {stat(b.pages.toLocaleString('pt-BR'), 'páginas')}
               {stat(mins ? fmtMinutes(mins) : '–', 'de leitura')}
-              {stat(String(perDay), 'pág por dia')}
+              {stat(perDay, 'pág por dia')}
             </View>
           </View>
 

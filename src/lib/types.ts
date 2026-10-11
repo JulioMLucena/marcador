@@ -59,7 +59,22 @@ export interface BookList {
   name: string;
   emoji?: string;
   bookIds: string[];
+  /** Livros que você ainda não tem: ficam na lista para comprar depois. */
+  wants?: Want[];
   createdAt: number;
+}
+
+export interface Want {
+  title: string;
+  author?: string;
+  cover?: string;
+  pages?: number;
+  isbn?: string;
+  gid?: string;
+  olKey?: string;
+  olEdition?: string;
+  categories?: string[];
+  addedAt: number;
 }
 
 export interface Data {

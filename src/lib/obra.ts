@@ -3,6 +3,8 @@ import { getJSON, google, googleBooks, norm, openLibraryQuery, toFound, type Fou
 /** Ficha completa de um livro que você ainda não tem. Tudo de fontes abertas, sem IA. */
 export interface Obra extends Found {
   description?: string;
+  /** A única sinopse que achamos está em inglês. */
+  descEnglish?: boolean;
   publisher?: string;
   year?: string;
   rating?: number;
@@ -41,8 +43,25 @@ export async function getObra(p: { gid?: string; title: string; author?: string;
   const q = `intitle:"${p.title.split(':')[0]}"${a ? ` inauthor:"${a}"` : ''}`;
   const j = await google(`volumes?q=${encodeURIComponent(q)}&langRestrict=pt&country=BR&maxResults=5`, 3000);
   const it = (j?.items || []).find((x: any) => x.volumeInfo?.language?.startsWith('pt')) ?? j?.items?.[0];
-  if (it) return toObra(it);
-  return fromOpenLibrary(p, q);
+  if (it) return withPtDescription(toObra(it));
+  // nome do autor muda entre as fontes ("Jorge Amado" x "Jorge Leal Amado de Faria"): tenta só pelo título
+  if (a) {
+    const j2 = await google(`volumes?q=${encodeURIComponent(`intitle:"${p.title.split(':')[0]}"`)}&langRestrict=pt&country=BR&maxResults=5`, 3000);
+    const it2 = (j2?.items || []).find((x: any) => x.volumeInfo?.language?.startsWith('pt'));
+    if (it2) return withPtDescription(toObra(it2));
+  }
+  const ol = await fromOpenLibrary(p, q);
+  return ol ? withPtDescription(ol) : null;
+}
+
+/** Sinopse em inglês: procura a mesma obra no Google em português e usa a sinopse de lá. */
+async function withPtDescription(o: Obra): Promise<Obra> {
+  if (o.description && !looksEnglish(o.description)) return o;
+  const q = o.isbn ? `isbn:${o.isbn}` : `intitle:"${o.title.split(':')[0]}"`;
+  const j = await google(`volumes?q=${encodeURIComponent(q)}&langRestrict=pt&country=BR&maxResults=5`, 2500);
+  const pt = (j?.items || []).map((x: any) => stripHtml(x.volumeInfo?.description)).find((d: string | undefined) => d && !looksEnglish(d));
+  if (pt) return { ...o, description: pt, descEnglish: false };
+  return { ...o, descEnglish: !!o.description };
 }
 
 const olText = (d: any) => (typeof d === 'string' ? d : d?.value)?.replace(/\r/g, '').replace(/\(\[source\]\[\d+\]\)|\[source\]\[\d+\]|-{3,}[\s\S]*$/g, '').trim();
@@ -75,7 +94,7 @@ async function fromOpenLibrary(p: { title: string; author?: string; olKey?: stri
     categories: base?.categories ?? (work?.subjects || []).slice(0, 5),
     olKey,
     olEdition,
-    description: description && looksEnglish(description) ? `(Sinopse disponível só em inglês)\n\n${description}` : description,
+    description,
     publisher: ed?.publishers?.[0],
     year: ed?.publish_date?.match(/\d{4}/)?.[0],
   };

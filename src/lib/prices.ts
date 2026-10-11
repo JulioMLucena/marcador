@@ -61,7 +61,9 @@ export async function recordOffers(b: Pick<Book, 'title' | 'author'>, offers: Of
 export async function checkQueuePrices() {
   const data = await loadData();
   if (!data.settings.priceAlert) return 0;
-  const queue = data.books.filter((b) => b.status === 'fila').slice(0, 12);
+  // fila da estante e os livros "pra comprar" das listas
+  const all: Pick<Book, 'title' | 'author' | 'cover'>[] = [...data.books.filter((b) => b.status === 'fila'), ...data.lists.flatMap((l) => l.wants ?? [])];
+  const queue = all.filter((b, i) => all.findIndex((x) => idOf(x) === idOf(b)) === i).slice(0, 15);
   let n = 0;
   for (const b of queue) {
     const o = await getObra({ title: b.title, author: b.author }).catch(() => null);
@@ -74,7 +76,7 @@ export async function checkQueuePrices() {
   return n;
 }
 
-async function notifyDrop(b: Book, best: Offer, before: number) {
+async function notifyDrop(b: Pick<Book, 'title' | 'author' | 'cover'>, best: Offer, before: number) {
   if (!(await Notifications.getPermissionsAsync()).granted) return;
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(CHANNEL, { name: 'Preço baixou', importance: Notifications.AndroidImportance.DEFAULT });
