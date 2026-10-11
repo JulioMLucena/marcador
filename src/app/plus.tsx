@@ -92,7 +92,10 @@ export default function Plus() {
         </Card>
       ) : null}
 
-      <Txt k="h2">Da equipe</Txt>
+      <Row style={{ justifyContent: 'space-between' }}>
+        <Txt k="h2">Da equipe</Txt>
+        <Btn title="Atualizar" kind="link" onPress={() => loadArtigos(true).then(setArts).catch(() => {})} />
+      </Row>
       {arts.map((a) => (
         <Pressable key={a.id} onPress={() => router.push({ pathname: '/artigo', params: { id: a.id } })} accessibilityRole="button">
           <Card style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
