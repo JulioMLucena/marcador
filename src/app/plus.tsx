@@ -55,7 +55,7 @@ export default function Plus() {
         </Row>
         <Txt style={{ color: '#C9D6CE', lineHeight: 21 }}>Seu painel de leitor e conteúdo feito pela equipe do Marcador.</Txt>
         <View style={{ alignSelf: 'flex-start', backgroundColor: '#E2A84A33', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-          <Txt style={{ color: '#E2A84A', fontFamily: F.semi, fontSize: 12 }}>Prévia liberada durante os testes</Txt>
+          <Txt style={{ color: '#E2A84A', fontFamily: F.semi, fontSize: 12 }}>Liberado para todos por enquanto</Txt>
         </View>
       </View>
 
@@ -110,7 +110,7 @@ export default function Plus() {
         </Pressable>
       ))}
 
-      <Txt k="h2">O que vem no Marcador+</Txt>
+      <Txt k="h2">Em breve no Marcador+</Txt>
       <Card style={{ gap: 14 }}>
         {PERKS.map(([icon, title, desc]) => (
           <Row key={title} style={{ gap: 12, alignItems: 'flex-start' }}>
@@ -122,12 +122,6 @@ export default function Plus() {
           </Row>
         ))}
       </Card>
-      <View style={{ alignItems: 'center', gap: 2 }}>
-        <Txt k="h3">R$ 6,90 por mês</Txt>
-        <Txt k="small">ou R$ 49,90 por ano (sai a R$ 4,16 por mês)</Txt>
-      </View>
-      <Btn big title="Assinar em breve" disabled onPress={() => {}} />
-      <Txt k="small" style={{ textAlign: 'center' }}>A assinatura entra quando o app estiver na Google Play.</Txt>
     </Screen>
   );
 }
