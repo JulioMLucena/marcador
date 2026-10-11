@@ -103,9 +103,11 @@ export async function recommend(d: Data, force = false, scope: Scope = 'mesa'): 
       n++;
     }
   };
+  // com poucos livros na estante, cada um rende mais sugestões, para o carrossel não ficar com 3
+  const few = seeds.length <= 2 ? 3 : seeds.length <= 4 ? 2 : 1;
   for (const { b, auth, theme, byTheme } of found) {
-    add(auth, b.title, `Também de ${firstAuthor(b.author)}`, wide ? 1 : 2);
-    if (theme) add(byTheme, b.title, `Mesmo tema: ${themeLabel(theme)}`, wide ? 2 : 3);
+    add(auth, b.title, `Também de ${firstAuthor(b.author)}`, wide ? 1 + few : 2);
+    if (theme) add(byTheme, b.title, `Mesmo tema: ${themeLabel(theme)}`, wide ? 2 * few + 1 : 3);
   }
   const items = out.slice(0, wide ? 18 : 10);
   if (items.length) AsyncStorage.setItem(wide ? RECS_KEY + '.estante' : RECS_KEY, JSON.stringify({ key, at: Date.now(), items })).catch(() => {});

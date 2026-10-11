@@ -1,0 +1,63 @@
+{
+  "artigos": [
+    {
+      "id": "15-minutos",
+      "title": "15 minutos por dia viram 20 livros por ano",
+      "subtitle": "A conta é simples e muda tudo.",
+      "author": "Julio, do Marcador",
+      "date": "2026-10-11",
+      "minutes": 3,
+      "emoji": "⏱️",
+      "color": "#1F5C4A",
+      "body": [
+        "A maioria das pessoas lê umas 30 páginas por hora. Com 15 minutos por dia, isso dá umas 7 páginas. Parece pouco, mas em um ano são mais de 2.700 páginas, o mesmo que uns 20 livros de tamanho médio.",
+        "## O segredo é não depender de vontade",
+        "Ler só quando dá vontade funciona até a primeira semana corrida. Um horário fixo funciona melhor: depois do almoço, no ônibus, antes de dormir. Escolha um e deixe o Marcador te lembrar.",
+        "## Dias ruins também contam",
+        "Leu uma página só? Conta. A sequência de dias importa mais do que o tamanho de cada leitura. É ela que transforma leitura em hábito."
+      ]
+    },
+    {
+      "id": "abandonar",
+      "title": "Largar um livro no meio não é fracasso",
+      "subtitle": "Por que perdemos a vontade e como voltar a ler.",
+      "author": "Julio, do Marcador",
+      "date": "2026-10-11",
+      "minutes": 4,
+      "emoji": "🔖",
+      "color": "#B9781A",
+      "body": [
+        "Quase todo leitor já parou um livro na página 80 e nunca mais voltou. Normalmente não é falta de tempo, é falta de vontade: o livro ficou lento, a história não pegou, ou a vida mudou de assunto.",
+        "## Troque sem culpa",
+        "Se um livro virou obrigação, ele está te afastando da leitura. Coloque ele de volta na fila e pegue outro. O livro vai continuar lá quando você estiver no clima.",
+        "## Anote o que te prendeu",
+        "Guardar um trecho ou escrever por que você começou aquele livro ajuda a lembrar o motivo quando a vontade cair. É por isso que o Marcador pede o seu trecho favorito.",
+        "## Dois livros ao mesmo tempo",
+        "Um mais leve e um mais denso. Quando o denso cansar, o leve segura o hábito."
+      ]
+    },
+    {
+      "id": "classicos-curtos",
+      "title": "5 clássicos brasileiros para ler em uma semana",
+      "subtitle": "Curtos e fáceis de achar.",
+      "author": "Julio, do Marcador",
+      "date": "2026-10-11",
+      "minutes": 3,
+      "emoji": "🇧🇷",
+      "color": "#2E7D4F",
+      "body": [
+        "Clássico não precisa ser tijolo. Estes cinco cabem numa semana e são ótimos para voltar a ler.",
+        "## Vidas secas, Graciliano Ramos",
+        "Uma família fugindo da seca no sertão. Frases curtas, capítulos que quase funcionam sozinhos.",
+        "## A hora da estrela, Clarice Lispector",
+        "A história de Macabéa, contada por um narrador que não para de duvidar de si mesmo. Dá para ler numa tarde.",
+        "## O alienista, Machado de Assis",
+        "Um médico decide internar a cidade inteira. Machado no seu modo mais engraçado.",
+        "## Morte e vida severina, João Cabral de Melo Neto",
+        "Um poema de teatro sobre um retirante descendo para o Recife. Lê em uma hora e fica na cabeça por semanas.",
+        "## Memórias de um sargento de milícias, Manuel Antônio de Almeida",
+        "Um dos primeiros romances urbanos do Brasil, cheio de malandragem carioca."
+      ]
+    }
+  ]
+}

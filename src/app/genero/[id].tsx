@@ -66,7 +66,8 @@ export default function Genero() {
         </Row>
       ) : !shown.length ? (
         <Card style={{ backgroundColor: c.soft, borderColor: 'transparent' }}>
-          <Txt>Não achei nada agora. Confira a internet e toque em Atualizar.</Txt>
+          <Txt>A internet falhou depois de três tentativas. Toque para tentar de novo.</Txt>
+          <Btn title="Tentar de novo" kind="ghost" onPress={() => load(true)} />
         </Card>
       ) : (
         <>

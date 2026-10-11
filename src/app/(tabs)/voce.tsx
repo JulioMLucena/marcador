@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Linking, Switch, View } from 'react-native';
+import { Linking, Pressable, Switch, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { Heatmap } from '../../components/Heatmap';
 import { Btn, Card, Row, Screen, Txt, s } from '../../components/ui';
@@ -42,6 +42,17 @@ export default function Voce() {
   return (
     <Screen>
       <Txt k="h1">Você</Txt>
+
+      <Pressable onPress={() => router.push('/plus')} accessibilityRole="button" accessibilityLabel="Abrir Marcador+">
+        <View style={{ backgroundColor: '#13241C', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, overflow: 'hidden' }}>
+          <View style={{ position: 'absolute', right: -30, top: -30, width: 110, height: 110, borderRadius: 55, backgroundColor: '#E2A84A', opacity: 0.16 }} />
+          <View style={s.grow}>
+            <Txt style={{ color: '#F1EEE4', fontFamily: F.displayBold, fontSize: 19 }}>Marcador<Txt style={{ color: '#E2A84A', fontFamily: F.displayBold, fontSize: 19 }}>+</Txt></Txt>
+            <Txt style={{ color: '#C9D6CE', fontSize: 13 }}>Seu painel de leitor e artigos da equipe</Txt>
+          </View>
+          <Txt style={{ color: '#E2A84A', fontFamily: F.semi }}>Ver ›</Txt>
+        </View>
+      </Pressable>
 
       <Row style={{ alignItems: 'stretch' }}>
         {[
@@ -125,6 +136,20 @@ export default function Voce() {
             onValueChange={async (v) => {
               if (v && !(await askNotificationPermission())) return;
               setSettings({ notify: v });
+            }}
+          />
+        </Row>
+        <Row style={{ justifyContent: 'space-between' }}>
+          <View style={s.grow}>
+            <Txt>Lembretes ao longo do dia</Txt>
+            <Txt k="small">Às 8h, 15h e 20h, com frases diferentes. O das 20h não toca se a meta do dia já foi.</Txt>
+          </View>
+          <Switch
+            value={settings.nudges}
+            trackColor={{ true: c.accent, false: c.line }}
+            onValueChange={async (v) => {
+              if (v && !(await askNotificationPermission())) return;
+              setSettings({ nudges: v });
             }}
           />
         </Row>

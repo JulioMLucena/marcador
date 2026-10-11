@@ -150,3 +150,44 @@ export function monthRecap({ books, sessions }: Data, year: number, month: numbe
 export function yearProgress({ books }: Data, year = new Date().getFullYear()) {
   return books.filter((b) => b.finishedAt && new Date(b.finishedAt).getFullYear() === year).length;
 }
+
+const PERIODS = [
+  { label: 'de madrugada', from: 0, to: 6 },
+  { label: 'de manhã', from: 6, to: 12 },
+  { label: 'à tarde', from: 12, to: 18 },
+  { label: 'à noite', from: 18, to: 24 },
+];
+
+/** Números do painel do Marcador+: ritmo, horário e dia preferidos, mês contra mês e média por livro. */
+export function insights({ books, sessions }: Data, today = new Date()) {
+  const mins = sessions.reduce((a, s) => a + (s.minutes || 0), 0);
+  const pages = sessions.reduce((a, s) => a + Math.max(0, (s.toPage || 0) - (s.fromPage || 0)), 0);
+  const byPeriod = PERIODS.map((p) => ({ ...p, m: 0 }));
+  const byDow = Array(7).fill(0) as number[];
+  for (const s of sessions) {
+    const d = new Date(s.start);
+    byPeriod.find((p) => d.getHours() >= p.from && d.getHours() < p.to)!.m += s.minutes || 0;
+    byDow[d.getDay()] += s.minutes || 0;
+  }
+  const period = mins ? byPeriod.reduce((a, b) => (b.m > a.m ? b : a)) : null;
+  const dow = mins ? byDow.indexOf(Math.max(...byDow)) : null;
+  const ym = (d: Date) => d.getFullYear() * 12 + d.getMonth();
+  const cur = ym(today);
+  const monthMin = (k: number) => sessions.filter((s) => ym(new Date(s.start)) === k).reduce((a, s) => a + (s.minutes || 0), 0);
+  const read = books.filter((b) => b.status === 'lido' && b.startedAt && b.finishedAt);
+  const avgDays = read.length ? Math.round(read.reduce((a, b) => a + (b.finishedAt! - b.startedAt!) / 864e5 + 1, 0) / read.length) : null;
+  return {
+    pagesPerHour: mins >= 10 ? Math.round((pages / mins) * 60) : null,
+    period: period?.label ?? null,
+    periodShare: period && mins ? Math.round((period.m / mins) * 100) : 0,
+    dow,
+    thisMonth: monthMin(cur),
+    lastMonth: monthMin(cur - 1),
+    avgDays,
+    weekly: [...Array(8)].map((_, i) => {
+      const end = addDays(today, -7 * (7 - i));
+      const from = dayKey(addDays(end, -6)), to = dayKey(end);
+      return sessions.filter((s) => s.day >= from && s.day <= to).reduce((a, s) => a + (s.minutes || 0), 0);
+    }),
+  };
+}

@@ -50,6 +50,8 @@ export interface Settings {
   yearGoal: number;
   /** Avisar quando um livro da fila baixa de preço. */
   priceAlert: boolean;
+  /** Lembretes fixos às 8h, 15h e 20h, além da hora de ler. */
+  nudges: boolean;
 }
 
 export type SoundId = 'nenhum' | 'chuva' | 'ondas' | 'marrom';
@@ -93,6 +95,7 @@ export const DEFAULT_SETTINGS: Settings = {
   currentId: null,
   yearGoal: 12,
   priceAlert: true,
+  nudges: true,
 };
 
 export const MOODS: Record<Mood, { emoji: string; label: string }> = {

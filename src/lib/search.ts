@@ -83,12 +83,13 @@ export async function google(path: string, ms = 2500): Promise<any> {
  * Com `pt`, só volta obra com edição em português, já com o título e a capa dessa edição.
  * Se o Google não responder, a mesma busca vai para o Open Library.
  */
-export async function googleBooks(q: string, { pt = false, max = 20, order, start = 0 }: { pt?: boolean; max?: number; order?: 'newest'; start?: number } = {}): Promise<Found[]> {
+export async function googleBooks(q: string, { pt = false, max = 20, order, start = 0, ms = 2500 }: { pt?: boolean; max?: number; order?: 'newest'; start?: number; ms?: number } = {}): Promise<Found[]> {
   const j = await google(
     `volumes?q=${encodeURIComponent(q)}&maxResults=${max}&printType=books&country=BR&fields=${FIELDS}` +
       (pt ? '&langRestrict=pt' : '') + (order ? `&orderBy=${order}` : '') + (start ? `&startIndex=${start}` : ''),
+    ms,
   );
-  if (!j) return openLibraryQuery(q, { pt, max, order, start });
+  if (!j) return openLibraryQuery(q, { pt, max, order, start, ms: ms + 1000 });
   const all = (j.items || []).map(toFound);
   return pt ? all.filter((b: { language?: string }) => !b.language || b.language.startsWith('pt')) : all;
 }
@@ -96,7 +97,7 @@ export async function googleBooks(q: string, { pt = false, max = 20, order, star
 const OL_FIELDS = 'key,title,author_name,number_of_pages_median,cover_i,isbn,subject,editions,editions.title,editions.cover_i,editions.isbn,editions.language,editions.number_of_pages,editions.key';
 
 /** Traduz a busca do Google para o Open Library e pega a edição em português de cada obra. */
-export async function openLibraryQuery(q: string, { pt = false, max = 20, order, start = 0 }: { pt?: boolean; max?: number; order?: 'newest'; start?: number } = {}): Promise<Found[]> {
+export async function openLibraryQuery(q: string, { pt = false, max = 20, order, start = 0, ms = 3500 }: { pt?: boolean; max?: number; order?: 'newest'; start?: number; ms?: number } = {}): Promise<Found[]> {
   const take = (k: string) => q.match(new RegExp(`${k}:(?:"([^"]+)"|(\\S+))`))?.slice(1).find(Boolean);
   const title = take('intitle'), author = take('inauthor'), subject = take('subject');
   const params = new URLSearchParams();
@@ -110,7 +111,7 @@ export async function openLibraryQuery(q: string, { pt = false, max = 20, order,
   }
   if (order === 'newest') params.set('sort', 'new');
   if (start) params.set('offset', String(start));
-  const j = await getJSON(`https://openlibrary.org/search.json?${params}&limit=${max}&fields=${OL_FIELDS}`, 3500).catch(() => null);
+  const j = await getJSON(`https://openlibrary.org/search.json?${params}&limit=${max}&fields=${OL_FIELDS}`, ms).catch(() => null);
   return (j?.docs || []).map((v: any) => {
     // com lang=pt o Open Library põe a edição em português primeiro
     const e = v.editions?.docs?.[0];
@@ -294,28 +295,41 @@ export const topicFits = (t: Topic, x: Found) =>
 /** Mais livros do tópico, para o botão Ver mais: a página seguinte das duas fontes. */
 export async function topicMore(t: Topic, page: number): Promise<Found[]> {
   const start = page * 40;
-  const [a, b] = await Promise.all([
-    googleBooks(t.q, { pt: true, max: 40, start }).catch(() => []),
-    googleBooks(t.q, { pt: true, max: 40, order: 'newest', start }).catch(() => []),
-  ]);
-  return uniqueByTitle([...a, ...b].filter((x) => x.cover && topicFits(t, x)));
+  for (let i = 0; i < 2; i++) {
+    const [a, b] = await Promise.all([
+      googleBooks(t.q, { pt: true, max: 40, start, ms: 7000 }).catch(() => []),
+      googleBooks(t.q, { pt: true, max: 40, order: 'newest', start, ms: 7000 }).catch(() => []),
+    ]);
+    if (a.length || b.length) return uniqueByTitle([...a, ...b].filter((x) => x.cover && topicFits(t, x)));
+  }
+  return [];
 }
+
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Livros de um tópico, só edições em português. Guarda por um dia. */
 export async function topicBooks(t: Topic, force = false): Promise<Found[]> {
-  if (!force) {
-    try {
-      const raw = await AsyncStorage.getItem(topicKey(t.id));
-      const c = raw ? JSON.parse(raw) : null;
-      if (c && Date.now() - c.at < DAY && c.items?.length) return c.items;
-    } catch {}
+  let old: Found[] = [];
+  try {
+    const raw = await AsyncStorage.getItem(topicKey(t.id));
+    const c = raw ? JSON.parse(raw) : null;
+    old = c?.items || [];
+    if (!force && c && Date.now() - c.at < DAY && old.length) return old;
+  } catch {}
+  // 40 livros por busca demoram no 4G: tempo maior e até 3 tentativas antes de desistir
+  for (let i = 0; i < 3; i++) {
+    if (i) await wait(800 * i);
+    // duas buscas ao mesmo tempo: as mais relevantes e as mais novas
+    const [a, b] = await Promise.all([
+      googleBooks(t.q, { pt: true, max: 40, ms: 7000 }).catch(() => []),
+      googleBooks(t.q, { pt: true, max: 40, order: 'newest', ms: 7000 }).catch(() => []),
+    ]);
+    const items = uniqueByTitle([...a, ...b].filter((x) => x.cover && topicFits(t, x))).slice(0, 30);
+    if (items.length) {
+      AsyncStorage.setItem(topicKey(t.id), JSON.stringify({ at: Date.now(), items })).catch(() => {});
+      return items;
+    }
   }
-  // duas buscas ao mesmo tempo: as mais relevantes e as mais novas
-  const [a, b] = await Promise.all([
-    googleBooks(t.q, { pt: true, max: 40 }).catch(() => []),
-    googleBooks(t.q, { pt: true, max: 40, order: 'newest' }).catch(() => []),
-  ]);
-  const items = uniqueByTitle([...a, ...b].filter((x) => x.cover && topicFits(t, x))).slice(0, 30);
-  if (items.length) AsyncStorage.setItem(topicKey(t.id), JSON.stringify({ at: Date.now(), items })).catch(() => {});
-  return items;
+  // sem internet: mostra o que já tinha guardado, mesmo velho
+  return old;
 }

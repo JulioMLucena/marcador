@@ -9,9 +9,10 @@ import * as Notifications from 'expo-notifications';
 import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { ConfettiProvider } from '../components/Confetti';
+import { IntroSplash } from '../components/IntroSplash';
 import { StoreProvider, useStore } from '../lib/store';
 import { useColors } from '../lib/theme';
 
@@ -23,6 +24,7 @@ function Nav() {
   const [a] = useFonts({ Literata_600SemiBold, Literata_700Bold, Literata_400Regular_Italic });
   const [b] = useFonts({ Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold });
   // a prévia web não tem notificações; Platform.OS não muda, então a ordem dos hooks é estável
+  const [intro, setIntro] = useState(true);
   const last = Platform.OS === 'web' ? null : Notifications.useLastNotificationResponse();
 
   useEffect(() => {
@@ -51,8 +53,11 @@ function Nav() {
         <Stack.Screen name="editar" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="retrospectiva" />
         <Stack.Screen name="compartilhar" />
+        <Stack.Screen name="plus" />
+        <Stack.Screen name="artigo" />
         <Stack.Screen name="terminado" options={{ presentation: 'transparentModal', animation: 'fade' }} />
       </Stack>
+      {intro ? <IntroSplash onDone={() => setIntro(false)} /> : null}
     </>
   );
 }

@@ -1,12 +1,15 @@
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, View } from 'react-native';
-import { BookGrid } from '../../components/BookGrid';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { Cover } from '../../components/Cover';
 import { Btn, Card, Row, Screen, Txt } from '../../components/ui';
 import { recommend, type Rec } from '../../lib/recommend';
-import { TOPICS, topicBooks } from '../../lib/search';
+import { openObra } from '../../lib/nav';
+import { sized, TOPICS, topicBooks } from '../../lib/search';
 import { useStore } from '../../lib/store';
 import { F, useColors } from '../../lib/theme';
+
+const CARD = 128;
 
 /** Tópicos que aparecem nos livros da estante, pelos gêneros e formatos. */
 function shelfTopics(books: { genres?: string[]; format?: string }[]) {
@@ -23,7 +26,6 @@ export default function Descobrir() {
   const c = useColors();
   const { data } = useStore();
   const [recs, setRecs] = useState<Rec[] | null>(null);
-  const [all, setAll] = useState(false);
   const mine = useMemo(() => shelfTopics(data.books), [data.books]);
   const topics = [...TOPICS.filter((t) => mine.has(t.id)), ...TOPICS.filter((t) => !mine.has(t.id))];
   const hasShelf = data.books.length > 0;
@@ -67,8 +69,23 @@ export default function Descobrir() {
       ) : (
         <>
           <Txt k="small" style={{ marginTop: -10 }}>Mesmos autores e mesmos temas dos livros da sua estante.</Txt>
-          <BookGrid items={all ? recs : recs.slice(0, 6)} />
-          {recs.length > 6 ? <Btn title={all ? 'Mostrar menos' : `Ver todas (${recs.length})`} kind="ghost" onPress={() => setAll(!all)} /> : null}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            snapToInterval={CARD + 14}
+            decelerationRate="fast"
+            style={{ marginHorizontal: -16 }}
+            contentContainerStyle={{ gap: 14, paddingHorizontal: 16 }}
+          >
+            {recs.map((r) => (
+              <Pressable key={r.title} onPress={() => openObra(r)} style={{ width: CARD, gap: 5 }} accessibilityRole="button" accessibilityLabel={r.title}>
+                <Cover title={r.title} author={r.author} uri={sized(r.cover, 300)} width={CARD} />
+                <Txt k="small" lines={2} style={{ color: c.ink, fontFamily: F.semi, fontSize: 13, lineHeight: 17 }}>{r.title}</Txt>
+                <Txt k="small" lines={2} style={{ fontSize: 11.5, lineHeight: 15, color: c.amber }}>{r.reason}</Txt>
+              </Pressable>
+            ))}
+          </ScrollView>
+          <Txt k="small" style={{ textAlign: 'center', marginTop: -6 }}>{recs.length} sugestões · arraste para o lado</Txt>
         </>
       )}
 
