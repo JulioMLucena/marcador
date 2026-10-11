@@ -3,6 +3,8 @@ name: APK
 on:
   push:
     branches: [main]
+    # artigo novo não precisa de APK novo
+    paths-ignore: [conteudo/**]
   workflow_dispatch:
 
 permissions:
