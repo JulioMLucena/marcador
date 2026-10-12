@@ -1,9 +1,9 @@
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
-import { uid } from '../lib/dates';
 import { openObra } from '../lib/nav';
 import { recommend, seedsOf, type Rec } from '../lib/recommend';
-import { sized } from '../lib/search';
+import { norm, sized } from '../lib/search';
 import { useStore } from '../lib/store';
 import { F, useColors } from '../lib/theme';
 import { Cover } from './Cover';
@@ -12,7 +12,7 @@ import { Btn, Row, Txt } from './ui';
 /** Carrossel de próximas leituras puxadas do que está na mesa. */
 export function Recs() {
   const c = useColors();
-  const { data, saveBook } = useStore();
+  const { data, saveList } = useStore();
   const [items, setItems] = useState<Rec[] | null>(null);
   const [added, setAdded] = useState<Record<string, true>>({});
   const seedKey = seedsOf(data).map((b) => b.id).join('|');
@@ -27,9 +27,13 @@ export function Recs() {
   if (!seedKey) return null;
   if (items && !items.length) return null;
 
-  const queue = (r: Rec) => {
-    const now = Date.now();
-    saveBook({ id: uid(), title: r.title, author: r.author, pages: r.pages || 1, page: 0, cover: r.cover, isbn: r.isbn, status: 'fila', createdAt: now, updatedAt: now });
+  // sugestão é livro que você não tem: vai para "Quero comprar" (com aviso de preço), não para a estante
+  const wantedIn = (r: Rec) =>
+    added[r.title] ? 'comprar' : data.lists.find((l) => l.wants?.some((w) => norm(w.title.split(':')[0]) === norm(r.title.split(':')[0])))?.id;
+  const want = (r: Rec) => {
+    const list = data.lists.find((l) => l.id === 'comprar') ?? { id: 'comprar', name: 'Quero comprar', emoji: '🛒', bookIds: [], wants: [], createdAt: Date.now() };
+    const w = { title: r.title, author: r.author, cover: r.cover, pages: r.pages, isbn: r.isbn, gid: r.gid, categories: r.categories, addedAt: Date.now() };
+    saveList({ ...list, wants: [w, ...(list.wants ?? [])] });
     setAdded((a) => ({ ...a, [r.title]: true }));
   };
 
@@ -55,10 +59,12 @@ export function Recs() {
               </Pressable>
               <Txt k="small" lines={2} style={{ color: c.ink, fontFamily: F.semi }}>{r.title}</Txt>
               <Txt k="small" lines={2} style={{ fontSize: 12 }}>{r.reason}</Txt>
-              {added[r.title] ? (
-                <Txt k="small" style={{ color: c.accent, fontFamily: F.semi }}>Na fila ✓</Txt>
+              {/* empurra o botão para o pé do cartão: fica na mesma linha em todos */}
+              <View style={{ flex: 1 }} />
+              {wantedIn(r) ? (
+                <Btn title="Na lista ✓" kind="link" onPress={() => router.push({ pathname: '/lista/[id]', params: { id: wantedIn(r)! } })} style={{ paddingVertical: 6 }} />
               ) : (
-                <Btn title="+ Fila" kind="ghost" onPress={() => queue(r)} style={{ paddingVertical: 6, paddingHorizontal: 10 }} />
+                <Btn title="+ Desejo" kind="ghost" onPress={() => want(r)} style={{ paddingVertical: 6, paddingHorizontal: 10 }} />
               )}
             </View>
           ))}

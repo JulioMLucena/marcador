@@ -69,9 +69,8 @@ const SLOTS = [
  * e o das 20h de hoje se a meta já foi cumprida.
  */
 async function scheduleNudges(data: Data, book: Data['books'][number] | undefined, doneToday: boolean) {
-  const { settings, books, sessions } = data;
+  const { settings, books } = data;
   const queue = books.filter((b) => b.status === 'fila').length;
-  const quotes = sessions.filter((s) => s.note && (!book || s.bookId === book.id)).map((s) => s.note!);
   const now = new Date();
   const mine = settings.hour * 60 + settings.minute;
   for (let i = 0; i < 7; i++) {
@@ -80,7 +79,7 @@ async function scheduleNudges(data: Data, book: Data['books'][number] | undefine
       const d = addDays(now, i);
       d.setHours(slot.hour, 0, 0, 0);
       if (d <= now || (i === 0 && k === 2 && doneToday)) continue;
-      const body = nudgeText(k, i, book, queue, quotes);
+      const body = nudgeText(k, i, book, queue);
       if (!body) continue;
       await Notifications.scheduleNotificationAsync({
         content: { title: slot.title, body, data: { open: book ? '/ler' : '/estante' } },
@@ -91,7 +90,7 @@ async function scheduleNudges(data: Data, book: Data['books'][number] | undefine
 }
 
 /** Frase do lembrete: muda com o horário (k) e o dia (i) para não repetir. */
-export function nudgeText(k: number, i: number, book: Data['books'][number] | undefined, queue: number, quotes: string[]) {
+export function nudgeText(k: number, i: number, book: Data['books'][number] | undefined, queue: number) {
   if (!book) {
     if (!queue) return null;
     return [
@@ -102,10 +101,9 @@ export function nudgeText(k: number, i: number, book: Data['books'][number] | un
   }
   const left = Math.max(0, book.pages - (book.page || 0));
   const p = book.page || 1;
-  const quote = quotes.length ? quotes[(i * 3 + k) % quotes.length] : null;
   const morning = [
     `Um capítulo com o café? ${book.title} está na página ${p}.`,
-    quote ? `Lembra disso? “${quote.slice(0, 120)}” Continue ${book.title} hoje.` : `Comece o dia com 10 páginas de ${book.title}.`,
+    `Continue ${book.title} hoje.`,
     `Faltam ${left} páginas para terminar ${book.title}.`,
   ];
   const afternoon = [
@@ -116,7 +114,7 @@ export function nudgeText(k: number, i: number, book: Data['books'][number] | un
   const night = [
     `Troca 10 minutos de celular por ${book.title}.`,
     `Antes de dormir: página ${p} de ${book.title}.`,
-    quote ? `“${quote.slice(0, 120)}” Bora continuar?` : `Fecha o dia com um capítulo de ${book.title}.`,
+    `Fecha o dia com um capítulo de ${book.title}.`,
   ];
   return [morning, afternoon, night][k][i % 3];
 }
