@@ -32,12 +32,14 @@ export function useCommitSession() {
       router.replace({ pathname: '/terminado', params: { id: book.id } });
       return;
     }
-    if (MILESTONES.includes(stNow) && stNow > stBefore) {
+    if (before < data.settings.goal && before + s.minutes >= data.settings.goal) {
+      // meta do dia: volta pro Hoje e o livro se fecha por cima, com confete (e a sequência, se for marco)
+      router.dismissTo('/');
+      router.push({ pathname: '/meta', params: { id: book.id, min: String(Math.round(before + s.minutes)) } });
+      return;
+    } else if (MILESTONES.includes(stNow) && stNow > stBefore) {
       confetti(3);
       toast(`${stNow} dias seguidos lendo!`);
-    } else if (before < data.settings.goal && before + s.minutes >= data.settings.goal) {
-      confetti(2);
-      toast('Meta do dia cumprida');
     } else {
       confetti(0);
       toast('Leitura guardada');

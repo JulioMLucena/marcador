@@ -57,6 +57,7 @@ function Nav() {
         <Stack.Screen name="plus" />
         <Stack.Screen name="artigo" />
         <Stack.Screen name="terminado" options={{ presentation: 'transparentModal', animation: 'fade' }} />
+        <Stack.Screen name="meta" options={{ presentation: 'transparentModal', animation: 'fade' }} />
       </Stack>
       {intro ? <IntroSplash onDone={() => setIntro(false)} /> : null}
     </>
