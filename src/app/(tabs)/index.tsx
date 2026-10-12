@@ -15,7 +15,7 @@ import { Recs } from '../../components/Recs';
 export default function Hoje() {
   const c = useColors();
   const ins = useSafeAreaInsets();
-  const { data, current: b, saveBook, setSettings, setTimer, timer } = useStore();
+  const { data, current: b, saveBook, setSettings, setTimer, timer, finish } = useStore();
   const { sessions, settings } = data;
   const today = new Date();
   const mbd = minutesByDay(sessions);
@@ -139,6 +139,14 @@ export default function Hoje() {
     <Screen>
       {header}
 
+      {finish && !timer ? (
+        <Card style={{ backgroundColor: c.amberSoft, borderColor: c.amber + '66' }}>
+          <Txt k="h3">Falta guardar sua última leitura</Txt>
+          <Txt>{fmtMinutes(finish.minutes)} de leitura esperando a página e o trecho.</Txt>
+          <Btn title="Guardar agora" onPress={() => router.push('/terminar')} />
+        </Card>
+      ) : null}
+
       {moodAlert(b, sessions) ? (
         <Card style={{ backgroundColor: c.amberSoft, borderColor: c.amber + '66' }}>
           <Txt k="h3">Esse livro está pesando</Txt>
@@ -203,6 +211,7 @@ export default function Hoje() {
         title={timer ? 'Voltar para a leitura' : readToday >= goal ? 'Ler mais um pouco' : `Ler agora · ${minutes} min`}
         onPress={() => start(minutes)}
       />
+      {!timer ? <Btn kind="link" title="Leu sem o cronômetro? Lançar à mão" onPress={() => router.push('/lancar')} /> : null}
       {other ? (
         <Btn kind="link" title={`Sem clima? Trocar para ${other.title} (${kindOf(other)})`} onPress={() => setSettings({ currentId: other.id })} />
       ) : nextUp ? (

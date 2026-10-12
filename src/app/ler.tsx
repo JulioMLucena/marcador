@@ -1,15 +1,16 @@
 import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
 import * as IntentLauncher from 'expo-intent-launcher';
 import { useKeepAwake } from 'expo-keep-awake';
-import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Platform, Pressable, Text, View } from 'react-native';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Linking, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { useConfetti } from '../components/Confetti';
 import { Btn, Row } from '../components/ui';
 import { fmtClock } from '../lib/dates';
-import { useStore } from '../lib/store';
+import { askNotificationPermission } from '../lib/notify';
+import { useStore, withLive } from '../lib/store';
 import { F } from '../lib/theme';
 import type { SoundId } from '../lib/types';
 
@@ -26,6 +27,7 @@ const INK = '#E9EEE9';
 const MUTED = '#8A9A91';
 const ACCENT = '#73C3A3';
 const AMBER = '#E2A84A';
+const SPOTIFY = '#1DB954';
 
 const elapsedOf = (t: { start: number; pausedMs: number; pausedAt: number | null }) =>
   Math.max(0, Math.floor(((t.pausedAt || Date.now()) - t.start - (t.pausedMs || 0)) / 1000));
@@ -40,10 +42,22 @@ export default function Ler() {
   const sound = data.settings.sound;
   const player = useAudioPlayer(SOUNDS.find((x) => x.id === sound)?.src ?? null);
   const glow = useRef(new Animated.Value(0)).current;
+  const { fim } = useLocalSearchParams<{ fim?: string }>();
+  // ao terminar, o cronômetro some antes da troca de tela; sem isto a tela voltava para o Hoje por cima do Terminar
+  const leaving = useRef(false);
+  const [linking, setLinking] = useState(false);
+  const [link, setLink] = useState(data.settings.playlist || '');
 
+  useFocusEffect(
+    useCallback(() => {
+      if (!timer && !leaving.current) router.replace('/');
+    }, [timer]),
+  );
+
+  // a notificação ao vivo precisa da permissão de avisos
   useEffect(() => {
-    if (!timer) router.replace('/');
-  }, [timer]);
+    askNotificationPermission().catch(() => {});
+  }, []);
 
   useEffect(() => {
     const id = setInterval(() => tick((n) => n + 1), 1000);
@@ -79,6 +93,12 @@ export default function Ler() {
     }
   }, [reached, timer, glow, setTimer, confetti]);
 
+  // botão Terminei da notificação abre esta tela com ?fim=1
+  const stopRef = useRef(() => {});
+  useEffect(() => {
+    if (fim && timer) stopRef.current();
+  }, [fim, timer]);
+
   if (!timer) return null;
   const R = 112;
   const C = 2 * Math.PI * R;
@@ -88,11 +108,31 @@ export default function Ler() {
     setTimer(timer.pausedAt ? { ...timer, pausedMs: timer.pausedMs + Date.now() - timer.pausedAt, pausedAt: null } : { ...timer, pausedAt: Date.now() });
 
   const stop = () => {
-    setFinish({ bookId: timer.bookId, start: timer.start, minutes: el / 60, fromPage: timer.fromPage });
+    if (leaving.current) return;
+    leaving.current = true;
+    // se pausou pela notificação com o app fechado, vale o tempo de lá
+    const t = withLive(timer);
+    setFinish({ bookId: t.bookId, start: t.start, minutes: elapsedOf(t) / 60, fromPage: t.fromPage });
     setTimer(null);
     player.pause();
     router.replace('/terminar');
   };
+
+  const playlist = data.settings.playlist;
+  const openPlaylist = (url = playlist) => {
+    if (!url) return;
+    // o som ambiente sai para a playlist tocar sozinha
+    if (sound !== 'nenhum') setSettings({ sound: 'nenhum' });
+    Linking.openURL(url).catch(() => {});
+  };
+  const savePlaylist = () => {
+    const url = link.trim().match(/https?:\/\/\S+|spotify:\S+/)?.[0];
+    if (!url) return;
+    setSettings({ playlist: url });
+    setLinking(false);
+    openPlaylist(url);
+  };
+  stopRef.current = stop;
 
   return (
     <View style={{ flex: 1, backgroundColor: BG, paddingTop: ins.top + 16, paddingBottom: ins.bottom + 16, paddingHorizontal: 20, justifyContent: 'space-between' }}>
@@ -139,6 +179,36 @@ export default function Ler() {
             </Pressable>
           ))}
         </Row>
+        {linking ? (
+          <View style={{ gap: 8 }}>
+            <TextInput
+              value={link}
+              onChangeText={setLink}
+              autoFocus
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="Cole o link da playlist"
+              placeholderTextColor={MUTED}
+              style={{ color: INK, fontFamily: F.body, fontSize: 15, borderWidth: 1, borderColor: '#2A3530', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 }}
+            />
+            <Text style={{ color: MUTED, fontFamily: F.body, fontSize: 12, textAlign: 'center' }}>No Spotify: abra a playlist, toque em ⋯ › Compartilhar › Copiar link.</Text>
+            <Row style={{ gap: 10 }}>
+              <Btn title="Cancelar" kind="ghost" onPress={() => setLinking(false)} fg={INK} style={{ flex: 1, borderColor: '#2A3530' }} />
+              <Btn title="Salvar e tocar" onPress={savePlaylist} fg="#0B1410" style={{ flex: 1, backgroundColor: SPOTIFY, borderColor: SPOTIFY }} />
+            </Row>
+          </View>
+        ) : (
+          <Row style={{ justifyContent: 'center', gap: 14 }}>
+            <Pressable onPress={() => (playlist ? openPlaylist() : setLinking(true))} accessibilityRole="button" style={{ padding: 6 }}>
+              <Text style={{ color: SPOTIFY, fontFamily: F.semi, fontSize: 14 }}>🎵 {playlist ? 'Tocar minha playlist' : 'Ligar minha playlist do Spotify'}</Text>
+            </Pressable>
+            {playlist ? (
+              <Pressable onPress={() => setLinking(true)} accessibilityRole="button" style={{ padding: 6 }}>
+                <Text style={{ color: MUTED, fontFamily: F.body, fontSize: 13, textDecorationLine: 'underline' }}>trocar</Text>
+              </Pressable>
+            ) : null}
+          </Row>
+        )}
         {Platform.OS === 'android' ? (
           <Pressable onPress={() => IntentLauncher.startActivityAsync(IntentLauncher.ActivityAction.ZEN_MODE_SETTINGS).catch(() => {})} style={{ alignSelf: 'center', padding: 6 }}>
             <Text style={{ color: MUTED, fontFamily: F.medium, fontSize: 14, textDecorationLine: 'underline' }}>🔕 Ligar o não perturbe do celular</Text>

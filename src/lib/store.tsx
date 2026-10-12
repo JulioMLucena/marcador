@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { hideLive, liveState, showLive } from '../../modules/live-reading';
 import { syncReminder } from './notify';
 import { refreshWidget } from '../widget/refresh';
 import { syncPriceTask } from './prices';
@@ -8,6 +9,7 @@ import { DEFAULT_SETTINGS, type Book, type BookList, type Data, type Session, ty
 
 export const DATA_KEY = 'marcador.data.v1';
 const TIMER_KEY = 'marcador.timer.v1';
+const FINISH_KEY = 'marcador.finish.v1';
 
 export interface Timer {
   bookId: string;
@@ -25,6 +27,13 @@ export interface Finish {
   start: number;
   minutes: number;
   fromPage: number;
+}
+
+/** Junta o que foi feito na notificação (pausar/continuar com o app fechado) ao cronômetro do app. */
+export function withLive(t: Timer): Timer {
+  const n = liveState();
+  if (!n || n.start !== t.start || (n.pausedMs === t.pausedMs && n.pausedAt === t.pausedAt)) return t;
+  return { ...t, pausedMs: n.pausedMs, pausedAt: n.pausedAt };
 }
 
 export async function loadData(): Promise<Data> {
@@ -68,7 +77,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [data, setData] = useState<Data>({ books: [], sessions: [], lists: [], settings: { ...DEFAULT_SETTINGS } });
   const [timer, setTimerState] = useState<Timer | null>(null);
-  const [finish, setFinish] = useState<Finish | null>(null);
+  const [finish, setFinishState] = useState<Finish | null>(null);
   const [draft, setDraft] = useState<Draft>({ note: '', photo: null });
   const loaded = useRef(false);
 
@@ -77,7 +86,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setData(await loadData());
       try {
         const t = await AsyncStorage.getItem(TIMER_KEY);
-        if (t) setTimerState(JSON.parse(t));
+        if (t) setTimerState(withLive(JSON.parse(t)));
+        else hideLive();
+        const f = await AsyncStorage.getItem(FINISH_KEY);
+        if (f) setFinishState(JSON.parse(f));
       } catch {}
       loaded.current = true;
       setReady(true);
@@ -137,6 +149,51 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setTimerState(t);
     (t ? AsyncStorage.setItem(TIMER_KEY, JSON.stringify(t)) : AsyncStorage.removeItem(TIMER_KEY)).catch(() => {});
   }, []);
+  // a sessão terminada também fica gravada: se o app fechar antes de guardar, ela continua esperando
+  const setFinish = useCallback((f: Finish | null) => {
+    setFinishState(f);
+    (f ? AsyncStorage.setItem(FINISH_KEY, JSON.stringify(f)) : AsyncStorage.removeItem(FINISH_KEY)).catch(() => {});
+  }, []);
+
+  // notificação fixa enquanto a leitura corre
+  const liveBook = data.books.find((b) => b.id === timer?.bookId);
+  useEffect(() => {
+    if (!loaded.current) return;
+    if (!timer) {
+      hideLive();
+      return;
+    }
+    const page = liveBook?.page || timer.fromPage || 0;
+    showLive({
+      title: liveBook?.title || 'Leitura',
+      text: liveBook?.pages ? `Página ${page} de ${liveBook.pages} · meta de ${timer.target} min` : `Meta de ${timer.target} min`,
+      start: timer.start,
+      pausedMs: timer.pausedMs,
+      pausedAt: timer.pausedAt,
+      page,
+      pages: liveBook?.pages || 0,
+      openUrl: 'marcador://ler',
+      finishUrl: 'marcador://ler?fim=1',
+    });
+  }, [timer, liveBook?.title, liveBook?.page, liveBook?.pages]);
+
+  // pausar/continuar pela notificação: o app confere ao voltar e a cada segundo enquanto está aberto
+  const timerRef = useRef(timer);
+  timerRef.current = timer;
+  useEffect(() => {
+    const pull = () => {
+      const t = timerRef.current;
+      if (!t) return;
+      const n = withLive(t);
+      if (n !== t) setTimer(n);
+    };
+    const id = setInterval(() => AppState.currentState === 'active' && pull(), 1000);
+    const sub = AppState.addEventListener('change', (st) => st === 'active' && pull());
+    return () => {
+      clearInterval(id);
+      sub.remove();
+    };
+  }, [setTimer]);
 
   const current = useMemo(() => {
     const r = data.books.filter((b) => b.status === 'lendo');
@@ -145,7 +202,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({ ready, data, current, timer, finish, draft, saveBook, deleteBook, saveSession, saveList, deleteList, setSettings, setTimer, setFinish, setDraft }),
-    [ready, data, current, timer, finish, draft, saveBook, deleteBook, saveSession, saveList, deleteList, setSettings, setTimer],
+    [ready, data, current, timer, finish, draft, saveBook, deleteBook, saveSession, saveList, deleteList, setSettings, setTimer, setFinish],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

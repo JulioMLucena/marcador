@@ -5,6 +5,9 @@ on:
     branches: [main]
     # artigo novo não precisa de APK novo
     paths-ignore: [conteudo/**]
+  # em PR só compila, para conferir o código nativo antes de juntar; não publica nada
+  pull_request:
+    paths-ignore: [conteudo/**]
   workflow_dispatch:
 
 permissions:
@@ -55,6 +58,7 @@ jobs:
           path: Marcador-*.apk
 
       - name: Publicar na página de versões
+        if: github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}

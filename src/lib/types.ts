@@ -52,6 +52,8 @@ export interface Settings {
   priceAlert: boolean;
   /** Lembretes fixos às 8h, 15h e 20h, além da hora de ler. */
   nudges: boolean;
+  /** Link de uma playlist (Spotify ou outro app) para tocar durante a leitura. */
+  playlist?: string;
 }
 
 export type SoundId = 'nenhum' | 'chuva' | 'ondas' | 'marrom';

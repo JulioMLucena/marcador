@@ -1,0 +1,7 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Android 16: deixa a leitura aparecer como atualização ao vivo (barra de status e tela de bloqueio) -->
+  <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+  <application>
+    <receiver android:name="expo.modules.livereading.LiveReadingReceiver" android:exported="false" />
+  </application>
+</manifest>
