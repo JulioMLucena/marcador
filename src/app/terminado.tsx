@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef } from 'react';
-import { Animated, Easing, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, View } from 'react-native';
+import { BookOpen } from '../components/BookOpen';
 import { useConfetti } from '../components/Confetti';
 import { Cover } from '../components/Cover';
 import { Btn, Card, Row, Txt } from '../components/ui';
@@ -16,15 +17,21 @@ export default function Terminado() {
   const confetti = useConfetti();
   const b = data.books.find((x) => x.id === id);
   const pop = useRef(new Animated.Value(0)).current;
+  // primeiro o livro se abre com "Leitura concluída!", depois vem o cartão com os números
+  const [intro, setIntro] = useState(true);
 
   useEffect(() => {
-    confetti(3);
-    const t = setTimeout(() => confetti(3), 1100);
-    Animated.spring(pop, { toValue: 1, friction: 5, tension: 60, useNativeDriver: true }).start();
+    // a chuva de confete cai quando a capa termina de abrir
+    const t = setTimeout(() => confetti(3), 1150);
     return () => clearTimeout(t);
-  }, [confetti, pop]);
+  }, [confetti]);
+
+  useEffect(() => {
+    if (!intro) Animated.spring(pop, { toValue: 1, friction: 5, tension: 60, useNativeDriver: true }).start();
+  }, [intro, pop]);
 
   if (!b) return null;
+  if (intro) return <BookOpen title={b.title} author={b.author} cover={b.cover} onDone={() => setIntro(false)} />;
   const ss = data.sessions.filter((s) => s.bookId === b.id);
   const mins = ss.reduce((a, s) => a + (s.minutes || 0), 0);
   const days = new Set(ss.map((s) => s.day)).size;
