@@ -44,6 +44,7 @@ function Nav() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="ler" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="terminar" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="lancar" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="scan" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="ocr" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="livro/[id]" />

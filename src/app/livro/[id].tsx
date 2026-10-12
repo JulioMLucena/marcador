@@ -180,6 +180,9 @@ export default function LivroDetalhe() {
         <Btn big icon="📸" title="Compartilhar nos stories" onPress={() => router.push({ pathname: '/compartilhar', params: { id: b.id } })} />
       ) : null}
       {b.status === 'lendo' ? <Btn big icon={timer ? '⏱️' : '📖'} title={timer ? 'Voltar para a leitura' : 'Ler agora'} onPress={readNow} /> : null}
+      {b.status === 'lendo' || b.status === 'pausado' ? (
+        <Btn kind="link" title="Leu sem o cronômetro? Lançar leitura" onPress={() => router.push({ pathname: '/lancar', params: { id: b.id } })} />
+      ) : null}
 
       <Card>
         <Txt k="label">Sua leitura em números</Txt>
