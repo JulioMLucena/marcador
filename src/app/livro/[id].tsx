@@ -240,20 +240,32 @@ export default function LivroDetalhe() {
       </Card>
 
       <Card style={{ gap: 0 }}>
-        <Txt k="label" style={{ marginBottom: 6 }}>Histórico de leitura</Txt>
+        <Row style={{ justifyContent: 'space-between', marginBottom: 6 }}>
+          <Txt k="label">Histórico de leitura</Txt>
+          {ss.length ? <Txt k="small" style={{ fontSize: 12 }}>toque para corrigir</Txt> : null}
+        </Row>
         {ss.length ? (
           (allHistory ? ss : ss.slice(0, 5)).map((x, i) => (
-            <View key={x.id} style={{ paddingVertical: 10, gap: 3, borderTopWidth: i ? 1 : 0, borderTopColor: c.line }}>
+            <Pressable
+              key={x.id}
+              onPress={() => router.push({ pathname: '/lancar', params: { sid: x.id } })}
+              accessibilityRole="button"
+              accessibilityHint="Corrigir esta leitura"
+              style={({ pressed }) => ({ paddingVertical: 10, gap: 3, borderTopWidth: i ? 1 : 0, borderTopColor: c.line, opacity: pressed ? 0.6 : 1 })}
+            >
               <Row style={{ justifyContent: 'space-between' }}>
                 <Txt style={{ fontFamily: F.semi, fontSize: 15 }}>{when(x.start)}</Txt>
-                {x.mood ? <Txt style={{ fontSize: 17 }}>{MOODS[x.mood].emoji}</Txt> : null}
+                <Row style={{ gap: 8 }}>
+                  {x.mood ? <Txt style={{ fontSize: 17 }}>{MOODS[x.mood].emoji}</Txt> : null}
+                  <Ionicons name="pencil" size={14} color={c.muted} />
+                </Row>
               </Row>
               <Txt k="small">
                 {x.minutes ? fmtMinutes(x.minutes) : 'Pelo widget'} · p. {x.fromPage} → {x.toPage}
                 {x.toPage > x.fromPage ? ` (${x.toPage - x.fromPage} pág)` : ''}
               </Txt>
               {x.note ? <Txt k="quote" lines={2} style={{ fontSize: 14, color: c.muted }}>“{x.note}”</Txt> : null}
-            </View>
+            </Pressable>
           ))
         ) : (
           <Txt k="small">Nenhuma leitura registrada ainda. Toque em Ler agora e o cronômetro guarda tudo aqui.</Txt>

@@ -130,7 +130,9 @@ function Bar({ from, to, color, base }: { from: number; to: number; color: strin
  */
 export function Impact({ session, book }: { session: Session; book: Book }) {
   const c = useColors();
-  const { data } = useStore();
+  const { data: all } = useStore();
+  // ao editar, a própria sessão já está guardada: tira ela da conta para não somar duas vezes
+  const data = { ...all, sessions: all.sessions.filter((x) => x.id !== session.id) };
   const goal = data.settings.goal;
   const dayBefore = minutesByDay(data.sessions)[session.day] || 0;
   const dayAfter = dayBefore + session.minutes;

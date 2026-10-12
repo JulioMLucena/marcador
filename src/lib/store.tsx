@@ -63,6 +63,7 @@ interface Store {
   saveBook: (b: Book) => void;
   deleteBook: (id: string) => void;
   saveSession: (s: Session) => void;
+  deleteSession: (id: string) => void;
   saveList: (l: BookList) => void;
   deleteList: (id: string) => void;
   setSettings: (p: Partial<Settings>) => void;
@@ -139,6 +140,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       })),
     [update],
   );
+  const deleteSession = useCallback((id: string) => update((d) => ({ ...d, sessions: d.sessions.filter((x) => x.id !== id) })), [update]);
   const saveList = useCallback(
     (l: BookList) => update((d) => ({ ...d, lists: d.lists.some((x) => x.id === l.id) ? d.lists.map((x) => (x.id === l.id ? l : x)) : [...d.lists, l] })),
     [update],
@@ -201,8 +203,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [data]);
 
   const value = useMemo(
-    () => ({ ready, data, current, timer, finish, draft, saveBook, deleteBook, saveSession, saveList, deleteList, setSettings, setTimer, setFinish, setDraft }),
-    [ready, data, current, timer, finish, draft, saveBook, deleteBook, saveSession, saveList, deleteList, setSettings, setTimer, setFinish],
+    () => ({ ready, data, current, timer, finish, draft, saveBook, deleteBook, saveSession, deleteSession, saveList, deleteList, setSettings, setTimer, setFinish, setDraft }),
+    [ready, data, current, timer, finish, draft, saveBook, deleteBook, saveSession, deleteSession, saveList, deleteList, setSettings, setTimer, setFinish],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
