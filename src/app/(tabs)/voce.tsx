@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Linking, Pressable, Switch, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { AppState, Linking, Pressable, Switch, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { Heatmap } from '../../components/Heatmap';
 import { Btn, Card, Row, Screen, Txt, s } from '../../components/ui';
 import { fmtMinutes, fmtTime, MONTHS } from '../../lib/dates';
-import { askNotificationPermission, testNotification } from '../../lib/notify';
+import { liveStatus, openLiveSettings, type LiveStatus } from '../../../modules/live-reading';
+import { askNotificationPermission } from '../../lib/notify';
 import { achievements, bestStreak, yearProgress } from '../../lib/stats';
 import { useStore } from '../../lib/store';
 import { F, useColors } from '../../lib/theme';
@@ -26,7 +27,12 @@ function Stepper({ label, value, onChange, min, max, step = 1, show }: { label: 
 export default function Voce() {
   const c = useColors();
   const { data, setSettings } = useStore();
-  const [test, setTest] = useState<'sent' | 'blocked' | null>(null);
+  const [live, setLive] = useState<LiveStatus | null>(() => liveStatus());
+  // volta dos ajustes do celular: confere de novo
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => st === 'active' && setLive(liveStatus()));
+    return () => sub.remove();
+  }, []);
   const { sessions, settings } = data;
   const totalMin = sessions.reduce((a, x) => a + (x.minutes || 0), 0);
   const pages = sessions.reduce((a, x) => a + Math.max(0, (x.toPage || 0) - (x.fromPage || 0)), 0);
@@ -153,26 +159,25 @@ export default function Voce() {
             }}
           />
         </Row>
-        <Row style={{ gap: 12 }}>
-          <Btn
-            title={test === 'sent' ? 'Chega em 5 segundos…' : 'Testar notificação'}
-            icon="🔔"
-            kind="ghost"
-            disabled={test === 'sent'}
-            onPress={async () => {
-              const r = await testNotification().catch(() => 'blocked' as const);
-              setTest(r === 'ok' ? 'sent' : 'blocked');
-              if (r === 'ok') setTimeout(() => setTest(null), 8000);
-            }}
-          />
-        </Row>
-        {test === 'blocked' ? (
+        {live && !live.enabled ? (
           <View style={{ gap: 4 }}>
             <Txt k="small" style={{ color: c.warn }}>O Android está bloqueando as notificações do Marcador.</Txt>
             <Btn title="Abrir ajustes do celular" kind="link" onPress={() => Linking.openSettings()} style={{ alignSelf: 'flex-start' }} />
           </View>
-        ) : test === 'sent' ? (
-          <Txt k="small">Pode bloquear a tela para ver como chega.</Txt>
+        ) : live ? (
+          <Row style={{ justifyContent: 'space-between' }}>
+            <View style={s.grow}>
+              <Txt>Leitura ao vivo na tela de bloqueio</Txt>
+              <Txt k="small">
+                {live.promoted === null
+                  ? 'O cronômetro aparece nas notificações. Ir para a barra “ao vivo” precisa do Android 16 (One UI 8).'
+                  : live.promoted
+                    ? 'Ligada: o cronômetro vai para a barra ao vivo enquanto você lê.'
+                    : 'Desligada nos ajustes do celular. Toque em Ligar e ative “Notificações ao vivo”.'}
+              </Txt>
+            </View>
+            {live.promoted === false ? <Btn title="Ligar" kind="ghost" onPress={openLiveSettings} /> : null}
+          </Row>
         ) : null}
         <Row style={{ justifyContent: 'space-between' }}>
           <View style={s.grow}>

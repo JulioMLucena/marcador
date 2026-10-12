@@ -1,12 +1,16 @@
 package expo.modules.livereading
 
 import android.annotation.SuppressLint
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
-import androidx.core.app.NotificationChannelCompat
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 
@@ -17,7 +21,7 @@ import androidx.core.app.NotificationManagerCompat
  */
 object LiveReading {
   private const val PREFS = "marcador.leitura"
-  private const val CHANNEL = "leitura-ao-vivo"
+  private const val CHANNEL = "leitura-ao-vivo-2"
   private const val ID = 4242
   const val ACTION_TOGGLE = "expo.modules.livereading.TOGGLE"
 
@@ -64,6 +68,36 @@ object LiveReading {
     post(ctx)
   }
 
+  /** Notificações liberadas e, no Android 16+, se a leitura pode virar notificação ao vivo. */
+  fun status(ctx: Context): Map<String, Any?> {
+    val enabled = NotificationManagerCompat.from(ctx).areNotificationsEnabled()
+    var promoted: Boolean? = null
+    if (Build.VERSION.SDK_INT >= 36) {
+      val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+      promoted = try {
+        nm.javaClass.getMethod("canPostPromotedNotifications").invoke(nm) as Boolean
+      } catch (e: Exception) {
+        null
+      }
+    }
+    return mapOf("enabled" to enabled, "promoted" to promoted, "sdk" to Build.VERSION.SDK_INT)
+  }
+
+  /** Abre o ajuste de notificação ao vivo do app (Android 16+) ou o de notificações. */
+  fun openSettings(ctx: Context) {
+    val promo = Intent("android.settings.APP_NOTIFICATION_PROMOTION_SETTINGS")
+    val plain = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+    for (i in listOf(promo, plain)) {
+      i.putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      if (i === promo && Build.VERSION.SDK_INT < 36) continue
+      try {
+        ctx.startActivity(i)
+        return
+      } catch (e: Exception) {
+      }
+    }
+  }
+
   fun clear(ctx: Context) {
     prefs(ctx).edit().clear().apply()
     NotificationManagerCompat.from(ctx).cancel(ID)
@@ -98,15 +132,22 @@ object LiveReading {
     if (!p.getBoolean("active", false)) return
     val nm = NotificationManagerCompat.from(ctx)
     if (!nm.areNotificationsEnabled()) return
-    nm.createNotificationChannel(
-      NotificationChannelCompat.Builder(CHANNEL, NotificationManagerCompat.IMPORTANCE_DEFAULT)
-        .setName("Leitura em andamento")
-        .setDescription("Cronômetro da leitura, com pausar e terminar")
-        .setSound(null, null)
-        .setVibrationEnabled(false)
-        .setShowBadge(false)
-        .build()
-    )
+    if (Build.VERSION.SDK_INT >= 26) {
+      val sys = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+      // canal antigo não mostrava o conteúdo na tela de bloqueio; o Android não deixa mudar isso depois de criado
+      sys.deleteNotificationChannel("leitura-ao-vivo")
+      if (sys.getNotificationChannel(CHANNEL) == null) {
+        sys.createNotificationChannel(
+          NotificationChannel(CHANNEL, "Leitura em andamento", NotificationManager.IMPORTANCE_DEFAULT).apply {
+            description = "Cronômetro da leitura, com pausar e terminar"
+            setSound(null, null)
+            enableVibration(false)
+            setShowBadge(false)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+          }
+        )
+      }
+    }
 
     val now = System.currentTimeMillis()
     val start = p.getLong("start", now)

@@ -120,20 +120,3 @@ export function nudgeText(k: number, i: number, book: Data['books'][number] | un
   ];
   return [morning, afternoon, night][k][i % 3];
 }
-
-/** Notificação de teste daqui a 5 segundos, para conferir se o celular deixa o app avisar. */
-export async function testNotification(): Promise<'ok' | 'blocked'> {
-  if (!(await askNotificationPermission())) return 'blocked';
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync(CHANNEL, {
-      name: 'Hora de ler',
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 200, 120, 200],
-    });
-  }
-  await Notifications.scheduleNotificationAsync({
-    content: { title: 'Teste do Marcador 📖', body: 'Se você está vendo isto, os lembretes vão chegar. Toque para abrir o app.' },
-    trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 5, channelId: CHANNEL },
-  });
-  return 'ok';
-}

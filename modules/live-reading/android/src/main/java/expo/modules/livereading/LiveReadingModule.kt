@@ -38,5 +38,13 @@ class LiveReadingModule : Module() {
     Function("getState") {
       LiveReading.state(context)
     }
+
+    Function("status") {
+      LiveReading.status(context)
+    }
+
+    Function("openSettings") {
+      LiveReading.openSettings(context)
+    }
   }
 }

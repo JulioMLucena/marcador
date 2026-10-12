@@ -215,25 +215,71 @@ export async function searchBooks(text: string, onPartial?: (r: Found[]) => void
 /** Compatível com quem já chamava findBooks. */
 export const findBooks = (title: string) => searchBooks(title);
 
-/** Todas as capas que acharmos para o livro: edições do Google Books e do Open Library. */
-export async function findCovers(title: string, author?: string, isbn?: string): Promise<string[]> {
+/** ISBN-13 (978…) para ISBN-10, que é o código que a Amazon usa nas imagens de livro. */
+export function isbn10(isbn?: string) {
+  const d = isbn?.replace(/[^0-9X]/gi, '');
+  if (!d) return undefined;
+  if (d.length === 10) return d;
+  if (d.length !== 13 || !d.startsWith('978')) return undefined;
+  const core = d.slice(3, 12);
+  const sum = [...core].reduce((a, ch, i) => a + (10 - i) * Number(ch), 0);
+  const check = (11 - (sum % 11)) % 11;
+  return core + (check === 10 ? 'X' : String(check));
+}
+
+/** Capa da Amazon pelo ISBN-10; sem capa ela devolve uma imagem 1x1, que a tela descarta. */
+const amazon = (isbn?: string) => {
+  const i = isbn10(isbn);
+  return i ? `https://images-na.ssl-images-amazon.com/images/P/${i}.01.LZZZZZZZ.jpg` : undefined;
+};
+
+/**
+ * Capas do livro em cinco fontes ao mesmo tempo: Apple Books (edições brasileiras, imagem grande),
+ * Google Books, Amazon pelo ISBN das edições, Open Library e o ISBN do seu livro.
+ * `onPartial` recebe a lista a cada fonte que responde, para a tela não esperar a mais lenta.
+ */
+export async function findCovers(title: string, author?: string, isbn?: string, onPartial?: (c: string[]) => void): Promise<string[]> {
   const a = author?.split(',')[0].trim();
-  const key = norm(title).split(' ').slice(0, 4).join(' ');
-  const [g, o] = await Promise.all([
-    googleBooks(`intitle:"${title}"${a ? ` inauthor:"${a}"` : ''}`, { max: 30 }).catch(() => []),
-    (async () => {
-      const works = await openLibrary(`title=${encodeURIComponent(title)}${a ? `&author=${encodeURIComponent(a)}` : ''}`, 3);
-      const k = works[0]?.key;
-      if (!k) return [] as string[];
-      const j = await getJSON(`https://openlibrary.org${k}/editions.json?limit=60`, 3000);
-      return (j?.entries || [])
+  const base = title.split(':')[0].trim();
+  const words = norm(base).split(' ');
+  // com autor, o título tem que começar igual; busca livre (sem autor) só precisa ter a palavra principal
+  const key = words.find((w) => w.length > 2) ?? words[0];
+  const like = (t?: string) => !!t && (a ? norm(t).startsWith(words.slice(0, Math.min(2, words.length)).join(' ')) : norm(t).includes(key));
+  const out: string[] = [];
+  const add = (list: (string | undefined)[]) => {
+    for (const u of list) if (u && !out.includes(u)) out.push(u);
+    onPartial?.(out.slice(0, 60));
+  };
+  add([amazon(isbn)]);
+
+  const apple = async () => {
+    const j = await getJSON(`https://itunes.apple.com/search?term=${encodeURIComponent([base, a].filter(Boolean).join(' '))}&media=ebook&entity=ebook&country=br&limit=40`, 4000);
+    add((j?.results || []).filter((r: any) => like(r.trackName)).map((r: any) => r.artworkUrl100?.replace(/\/\d+x\d+bb\./, '/600x900bb.')));
+  };
+  const googleAll = async () => {
+    const [pt, any] = await Promise.all([
+      googleBooks(`intitle:${base}${a ? ` inauthor:${a}` : ''}`, { max: 40, pt: true, ms: 4000 }).catch(() => [] as Found[]),
+      googleBooks(`intitle:"${base}"${a ? ` inauthor:"${a}"` : ''}`, { max: 40, ms: 4000 }).catch(() => [] as Found[]),
+    ]);
+    const found = [...pt, ...any].filter((b) => like(b.title));
+    add(found.map((b) => b.cover));
+    // a mesma edição na Amazon costuma ter a capa em alta
+    add(found.map((b) => amazon(b.isbn)).slice(0, 12));
+  };
+  const openLib = async () => {
+    const works = await openLibrary(`title=${encodeURIComponent(base)}${a ? `&author=${encodeURIComponent(a)}` : ''}`, 3);
+    const k = works[0]?.key;
+    if (!k) return;
+    const j = await getJSON(`https://openlibrary.org${k}/editions.json?limit=60`, 4000);
+    add(
+      (j?.entries || [])
         .flatMap((e: any) => (e.covers || []).filter((c: number) => c > 0).slice(0, 1))
-        .map((c: number) => `https://covers.openlibrary.org/b/id/${c}-L.jpg`);
-    })().catch(() => [] as string[]),
-  ]);
-  const fromGoogle = g.filter((b) => b.cover && norm(b.title).startsWith(key)).map((b) => b.cover!);
-  const fromIsbn = isbn ? [`https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?default=false`] : [];
-  return [...new Set([...fromGoogle, ...o, ...fromIsbn])].slice(0, 40);
+        .map((c: number) => `https://covers.openlibrary.org/b/id/${c}-L.jpg`),
+    );
+  };
+  await Promise.all([apple(), googleAll(), openLib()].map((p) => p.catch(() => {})));
+  if (isbn) add([`https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?default=false`]);
+  return out.slice(0, 60);
 }
 
 /** Palpite de formato pelas categorias e pelo título. */
